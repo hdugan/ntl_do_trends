@@ -124,7 +124,7 @@ xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
                           labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
                           minor_breaks=NULL, expand=c(0,0))
 ## text sizes scaled down for the 6.5in-wide output (was 12in) so panel titles like
-## "Northern Wisconsin Lakes (forested)" fit without clipping
+## "Northern Forested Lakes" fit without clipping
 th <- theme_minimal(base_size=6.5) + theme(
   panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
@@ -149,15 +149,15 @@ block <- function(reg, vv, pal, right, ttl, sub){
 }
 ## Figure title + long explanatory paragraph are NOT drawn on the PNG (kept out of the image so
 ## the figure can be captioned in a manuscript/report instead) -- collected here and written to
-## figures/fig01_captions.csv alongside the panel-level labels ("Northern Wisconsin Lakes...", "Trend in
+## figures/fig01_captions.csv alongside the panel-level labels ("Northern Forested Lakes...", "Trend in
 ## temperature", etc.), which DO stay on the PNG since they're needed to tell the panels apart.
 FIG_TITLE <- "Rate of change across Wisconsin's lakes: full-record trends by depth & season"
 captions <- list()
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
-  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Wisconsin Lakes\n(forested)", "Trend in temperature")
+  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Forested Lakes", "Trend in temperature")
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
-  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Wisconsin Lakes\n(agricultural/urban)", "Trend in temperature")
+  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Agricultural/Urban Lakes", "Trend in temperature")
   SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
   left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
