@@ -149,10 +149,19 @@ block <- function(reg, vv, pal, right, ttl, sub){
 }
 ## Figure title + long explanatory paragraph are NOT drawn on the PNG (kept out of the image so
 ## the figure can be captioned in a manuscript/report instead) -- collected here and written to
-## figures/fig01_captions.csv alongside the panel-level labels ("Northern Forested Lakes...", "Trend in
-## temperature", etc.), which DO stay on the PNG since they're needed to tell the panels apart.
+## the shared figures/captions.csv (one row per output PNG, across all fig*.R scripts) alongside
+## the panel-level labels ("Northern Forested Lakes...", "Trend in temperature", etc.), which DO
+## stay on the PNG since they're needed to tell the panels apart.
 FIG_TITLE <- "Rate of change across Wisconsin's lakes: full-record trends by depth & season"
 captions <- list()
+
+## merge-write so this script's rows don't clobber captions written by other fig*.R scripts
+write_captions <- function(new_caps){
+  path <- "figures/captions.csv"
+  old <- if(file.exists(path)) fread(path) else data.table(file=character(),title=character(),caption=character())
+  fwrite(rbind(old[!file %in% new_caps$file], new_caps), path)
+  cat("wrote", path, "\n")
+}
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
   NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Forested Lakes", "Trend in temperature")
@@ -175,8 +184,7 @@ make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
   paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig01_rate_sat.png")
 
-fwrite(rbindlist(captions), "figures/fig01_captions.csv")
-cat("wrote figures/fig01_captions.csv\n")
+write_captions(rbindlist(captions))
 
 ## Console summary. NOTE: deliberately summarises ALL cells, not just the significant ones.
 ## Taking the median over only p<0.05 cells is selection-biased (winner's curse) -- conditioning on
