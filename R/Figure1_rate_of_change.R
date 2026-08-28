@@ -116,20 +116,22 @@ pal_T <- scale_fill_gradientn(colours=c("#2166ac","#4393c3","#92c5de","#d1e5f0",
            limits=c(-1,1), oob=squish, name="Δ Temp (°C/decade)", breaks=c(-1,-0.5,0,0.5,1))
 brbg <- c("#8c510a","#bf812d","#dfc27d","#f6e8c3","#f5f5f5","#c7eae5","#80cdc1","#35978f","#01665e")
 pal_O    <- scale_fill_gradientn(colours=brbg, limits=c(-1.5,1.5), oob=squish, breaks=c(-1.5,-0.75,0,0.75,1.5),
-              name="Δ DO (mg/L/decade)   O₂ loss ◀ ▶ O₂ gain")
+              name="Δ DO (mg/L/decade)")
 pal_Osat <- scale_fill_gradientn(colours=brbg, limits=c(-15,15), oob=squish, breaks=c(-15,-7.5,0,7.5,15),
               name="Δ DO (% sat/decade)")
 mbound <- c(91,121,152,182,213,244,274,305,320)
 xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
                           labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
                           minor_breaks=NULL, expand=c(0,0))
-th <- theme_minimal(base_size=11) + theme(
-  panel.grid=element_blank(), panel.spacing=unit(0.35,"lines"),
-  legend.position="bottom", legend.key.width=unit(0.9,"cm"), legend.key.height=unit(0.4,"cm"),
-  legend.title=element_text(size=9), plot.title=element_text(face="bold",size=13),
-  plot.subtitle=element_text(size=10.5, color="grey30"),
-  axis.text=element_text(size=8),
-  strip.text.y.right=element_markdown(angle=0, hjust=0, size=8.6, lineheight=1.3))
+## text sizes scaled down for the 6.5in-wide output (was 12in) so panel titles like
+## "NORTHERN LAKES · Trout Lake district" fit without clipping
+th <- theme_minimal(base_size=6.5) + theme(
+  panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
+  legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
+  legend.title=element_text(size=5.5), plot.title=element_text(face="bold",size=7.5),
+  plot.subtitle=element_text(size=6.5, color="grey30"),
+  axis.text=element_text(size=5),
+  strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
 
 block <- function(reg, vv, pal, right, ttl, sub){
   d <- w[region==reg & var==vv]
@@ -144,6 +146,13 @@ block <- function(reg, vv, pal, right, ttl, sub){
     { if(!right) theme(strip.text.y=element_blank()) } +
     { if(right) theme(axis.text.y=element_blank(), axis.title.y=element_blank()) }
 }
+## Figure title + long explanatory paragraph are NOT drawn on the PNG (kept out of the image so
+## the figure can be captioned in a manuscript/report instead) -- collected here and written to
+## figures/fig01_captions.csv alongside the panel-level labels ("NORTHERN LAKES ...", "Trend in
+## temperature", etc.), which DO stay on the PNG since they're needed to tell the panels apart.
+FIG_TITLE <- "Rate of change across Wisconsin's lakes: full-record trends by depth & season"
+captions <- list()
+
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
   NT <- block("Northern","wtemp", pal_T, FALSE, "NORTHERN LAKES · Trout Lake district", "Trend in temperature")
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
@@ -152,11 +161,9 @@ make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
   left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   design <- (left | right) + plot_layout(guides="keep")
-  final <- wrap_elements(design) +
-    plot_annotation(title="Rate of change across Wisconsin's lakes: full-record trends by depth & season",
-      subtitle=subtitle,
-      theme=theme(plot.title=element_text(face="bold",size=17), plot.subtitle=element_text(size=10,color="grey35", lineheight=1.05)))
-  ggsave(outfile, final, width=12, height=15, dpi=400, bg="white"); cat("wrote", outfile, "\n")
+  final <- wrap_elements(design)
+  ggsave(outfile, final, width=6.5, height=8, dpi=500, bg="white"); cat("wrote", outfile, "\n")
+  captions[[outfile]] <<- data.table(file=outfile, title=FIG_TITLE, caption=subtitle)
 }
 
 yrs <- range(prof$year)
@@ -166,6 +173,9 @@ make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
   paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig01_rate_mgL.png")
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
   paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig01_rate_sat.png")
+
+fwrite(rbindlist(captions), "figures/fig01_captions.csv")
+cat("wrote figures/fig01_captions.csv\n")
 
 ## Console summary. NOTE: deliberately summarises ALL cells, not just the significant ones.
 ## Taking the median over only p<0.05 cells is selection-biased (winner's curse) -- conditioning on

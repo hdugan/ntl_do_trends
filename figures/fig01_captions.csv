@@ -1,0 +1,11 @@
+file,title,caption
+figures/fig01_rate_mgL.png,Rate of change across Wisconsin's lakes: full-record trends by depth & season,"April–mid-November. Theil-Sen slope per DECADE over the full 1981–2025 record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.
+Cells are hatched where the trend is NOT significant (Mann-Kendall p<0.05); plain cells are significant. Blank = fewer than 10 years or <20-year span, too little to fit a trend.
+Values are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.
+Beside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).
+Oxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."
+figures/fig01_rate_sat.png,Rate of change across Wisconsin's lakes: full-record trends by depth & season,"April–mid-November. Theil-Sen slope per DECADE over the full 1981–2025 record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.
+Cells are hatched where the trend is NOT significant (Mann-Kendall p<0.05); plain cells are significant. Blank = fewer than 10 years or <20-year span, too little to fit a trend.
+Values are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.
+Beside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).
+As % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."
