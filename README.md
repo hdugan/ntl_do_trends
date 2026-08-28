@@ -16,7 +16,7 @@ are physically implausible, writing `data/profiles_clean.csv` (the raw
 |---|---|
 | `00_pull_data.R` | (no figure) — downloads `data/profiles.csv`, `chem_north.csv`, `secchi.csv`, `color.csv`, `chl.csv` from EDI (NTL-LTER packages 29, 1, 31, 87, 35) |
 | `01_plot_profiles.R` | `figures/diagnostics/diag_<lake>_<bin>_profiles.png` — every individual temp & DO(%sat) profile, per lake x half-month bin (same bins as fig12), baseline (pre-2016) vs recent (2016-2025) |
-| `02_clean_profiles.R` | (no figure) — for lakes with zmax > 10 m, removes unrealistic bottom-point jumps (temp up >5°C or DO up >20 %sat at the single deepest reading vs the next-shallowest); writes `data/profiles_clean.csv` and logs removed points to `data/profiles_removed_points.csv` |
+| `02_clean_profiles.R` | (no figure) — for lakes with zmax > 10 m, removes unrealistic bottom-point jumps (temp up >5°C or DO up >20 %sat at the single deepest reading vs the next-shallowest), plus one manually-flagged bad-sensor DO profile (Sparkling 2004-08-16); writes `data/profiles_clean.csv` and logs removed points to `data/profiles_removed_points.csv` |
 | `fig03_04_depthtime.R` | `fig03_northern_do/sat.png`, `fig04_southern_do/sat.png` — depth-time DO heatmaps, northern vs southern lakes |
 | `fig07_alllakes_metO2_aug.R` | `fig07_alllakes_metO2_aug.png` — metalimnetic O2 maxima, August, all lakes |
 | `fig11_light_attenuation.R` | `fig11_light_attenuation.png` — light attenuation vs DOC/Secchi |

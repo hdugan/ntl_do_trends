@@ -11,6 +11,8 @@
 ## Restricted to lakes with zmax > 10 m: in shallow lakes/bogs (Allequash, Trout Bog, Crystal
 ## Bog, Wingra) a jump like this over 1-2 m of depth is plausible real biogeochemistry, not a
 ## sensor glitch -- only in a deep, stratified lake is a jump at the very bottom implausible.
+## Also manually removes one whole bad-sensor DO profile (Sparkling 2004-08-16) spotted the
+## same way -- see the "manual removal" block below.
 suppressMessages(library(data.table))
 
 TEMP_JUMP_MAX <- 5   # degC: max allowed increase at the single deepest reading vs the next-shallowest
@@ -42,6 +44,7 @@ removed <- rbind(
   flag_bottom_jump(prof[lakeid %in% deep_lakes], "o2sat", DO_JUMP_MAX)
 )
 setorder(removed, variable, lakeid, sampledate)
+removed[, reason := "auto_bottom_jump"]
 
 ## o2 (mg/L) and o2sat are the same underlying DO measurement in different units. Checked every
 ## flagged o2sat row: o2 jumps anomalously there too (same corrupted reading), so it's nulled
@@ -52,7 +55,21 @@ for(i in which(removed$variable == "o2sat")){
   removed$o2_also_nulled[i] <- prof[.(removed$lakeid[i], removed$sampledate[i], removed$depth[i]), o2]
 }
 
-cat("=== Unrealistic bottom-point jumps removed ===\n")
+## --- manual removal: the whole Sparkling 2004-08-16 DO profile -----------------------------
+## Visually odd in 01_plot_profiles.R (diag_SP_aug16-31_profiles.png): every other August cast
+## at Sparkling stays >100% o2sat out past 4 m then crashes sharply into the metalimnion, but
+## this one starts declining by 4 m (102.2 -> 78.4 %sat, vs a next-largest surface-to-4m drop of
+## just 3.0 pts across the whole record) and instead of a sharp crash sits unrealistically low
+## and flat (43-67 %sat) through 5-13 m -- a bad DO sensor for the whole cast, not one point.
+## Temperature that day is unremarkable, so only o2 / o2sat are removed; wtemp is kept.
+manual_lake <- "SP"; manual_date <- as.IDate("2004-08-16")
+manual <- prof[lakeid == manual_lake & sampledate == manual_date & is.finite(o2sat),
+  .(lakeid, sampledate, variable = "o2sat", depth, value = o2sat,
+    prev_depth = NA_real_, prev_value = NA_real_, jump = NA_real_,
+    reason = "manual_full_profile", o2_also_nulled = o2)]
+removed <- rbind(removed, manual)
+
+cat("=== Unrealistic / manually-flagged points removed ===\n")
 print(removed, nrows = nrow(removed))
 
 ## null out the flagged value (row and other variables at that depth kept)
