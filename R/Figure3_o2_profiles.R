@@ -42,7 +42,11 @@ setorder(do, lakeid, era, depth)   # geom_path joins in row order; guard against
 ## strip labels: lake name (bold) + region tag, same convention as Figure2_clarity_trends.R
 meta[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span> (%s)",
                             name, tolower(region))]
+## blank placeholder panel right after the 7 northern lakes, so with ncol=4 the northern lakes
+## fill their own two rows (4 + 3-plus-a-gap) and the 4 southern lakes start fresh on row 3,
+## rather than Mendota filling that trailing gap
 ord <- meta[order(region,-zmax), striplab]
+ord <- append(ord, "", after=uniqueN(meta[region=="Northern", lakeid]))
 do <- merge(do, meta[,.(lakeid,striplab)], by="lakeid")
 do[, strip := factor(striplab, levels=ord)]
 
@@ -59,7 +63,7 @@ th <- theme_minimal(base_size=6.5) + theme(
 
 g <- ggplot(do, aes(o2, depth, color=era)) +
   geom_path(linewidth=0.6) + geom_point(size=0.5) +
-  facet_wrap(~strip, scales="free_y", ncol=4) +
+  facet_wrap(~strip, scales="free_y", ncol=4, drop=FALSE) +
   scale_y_reverse() +
   scale_color_manual(values=pal, name=NULL) +
   labs(x="Dissolved oxygen (mg/L)", y="Depth (m)") +
