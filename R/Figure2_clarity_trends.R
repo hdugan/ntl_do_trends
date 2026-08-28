@@ -1,22 +1,21 @@
 ## Fig 2: standardized water-clarity trends, all 11 NTL lakes. Data: EDI 1 (DOC), 29 (light/PAR),
-## 31 (Secchi), 87 (CDOM colour).
-## FOUR independently-measured views of clarity for the 7 NORTHERN lakes (they cross-validate
+## 31 (Secchi).
+## THREE independently-measured views of clarity for the 7 NORTHERN lakes (they cross-validate
 ## each other), but only TWO for the 4 SOUTHERN lakes:
 ##   Kd        -- light-extinction coefficient (m^-1) from PAR profiles;  higher = darker  [north only]
-##   CDOM a440 -- absorption coefficient at 440 nm, optical signature of coloured DOM; higher = darker  [north only]
 ##   DOC       -- dissolved organic carbon (mg/L), the lab-measured driver;  higher = darker  [all 11]
 ##   Secchi    -- Secchi disk depth (m), read by eye;                        lower  = darker  [all 11]
-## Kd and a440 are northern-only: color.csv has no southern lakeids at all (87 is a Trout Lake
-## Area package), and southern PAR profiles (frlight) only start in 2019 -- too short to trend.
+## Kd is northern-only: southern PAR profiles (frlight) only start in 2019 -- too short to trend.
+## (CDOM colour / a440, EDI 87, is deliberately excluded from this analysis.)
 ##
 ## Every metric is standardized per lake as a ROBUST z-score -- (annual value - its own MEDIAN) /
 ## its own MAD (median absolute deviation), not mean/SD -- so one wild bloom-day or post-storm
 ## cast can't inflate the scale the rest of the record is measured against. Sign-flipped so that,
-## for every metric, POSITIVE = DARKER: Kd/a440/DOC already have that sign; Secchi is negated
-## (low Secchi = dark = should be positive). This "darkness anomaly" lets four metrics in
-## different units, and lakes with only 2 of the 4, share ONE axis and one fixed scale across
-## every panel -- panels are directly comparable, which the old min-max rescale-onto-Kd's-raw-
-## units approach did not allow. Plotted with UP = darker.
+## for every metric, POSITIVE = DARKER: Kd/DOC already have that sign; Secchi is negated (low
+## Secchi = dark = should be positive). This "darkness anomaly" lets metrics in different units,
+## and lakes with only 2 of the 3, share ONE axis and one fixed scale across every panel --
+## panels are directly comparable, which the old min-max rescale-onto-Kd's-raw-units approach did
+## not allow. Plotted with UP = darker.
 ##
 ## Secchi is recorded twice per visit -- secview (with viewing scope) and secnview (no scope,
 ## reads ~0.5 m shallower, r=0.97). secview is essentially northern-only (southern lakes have 0-1
@@ -29,13 +28,8 @@ MIN_OBS <- 3            # a lake-year is plotted only if >=3 sampling DATES fall
 
 ## Annual value = MEDIAN across sampling dates (not mean): robust to the odd bloom-day or
 ## post-storm cast, consistent with the median-based treatment used in fig08/fig09/fig12.
-## Counting DATES not rows matters -- colour has 11 wavelength rows per sample and DOC several
-## depths per sample, so a raw row count would let one visit satisfy the 3-observation threshold.
-##
-## EXCEPTION: the >=3-date rule applies to Kd, DOC and Secchi, which are sampled ~4-9 times each
-## summer. CDOM colour is collected as ONE integrated sample per lake per year by design -- median
-## 1 date/lake-year -- so applying the rule there would remove the variable, not just thin years.
-## Colour is therefore exempt (min_obs=1); treat it as the noisier of the four series.
+## Counting DATES not rows matters -- DOC has several depths per sample, so a raw row count would
+## let one visit satisfy the 3-observation threshold.
 annual <- function(d, min_obs=MIN_OBS)
   d[, .(v=median(v), n=uniqueN(date)), by=.(lakeid,year)][n>=min_obs, .(lakeid,year,v)]
 
@@ -74,20 +68,7 @@ kd <- p[, { v <- NA_real_
   list(v=v) }, by=.(lakeid, date, year)]           # one Kd per cast
 kdyr <- robz(annual(kd[is.finite(v) & v>0]))
 
-## ---------------- metric 2: CDOM colour, absorption coefficient a440 (m^-1), 1990- ----------------
-## Northern only -- see file header. CRITICAL: color.csv `value` is raw absorbance, which scales
-## with the spectrophotometer PATH LENGTH (`cuvette`, cm) via Beer-Lambert; the lab switched
-## cuvettes mid-record. Converting to a440 = 2.303*A/L(m) removes that artifact.
-co <- fread("data/color.csv")[lakeid %in% NORTH & is.finite(value) &
-                              wavelength>=435 & wavelength<=445 &
-                              is.finite(cuvette) & cuvette>0 & (is.na(color_flag) | color_flag=="") &
-                              !(lakeid=="CR" & year4 %in% c(2012,2013))]
-co[, `:=`(year=year4, date=as.Date(sampledate), doy=yday(as.Date(sampledate)),
-          a440 = 2.303 * value * 100 / cuvette)]
-codate <- co[doy>=SEASON[1] & doy<=SEASON[2], .(v=median(a440)), by=.(lakeid,date,year)]
-colyr  <- robz(annual(codate, min_obs=1))   # exempt: one integrated sample per year by design
-
-## ---------------- metric 3: DOC (mg/L), surface (0 m exactly), all 11 lakes ------------------------
+## ---------------- metric 2: DOC (mg/L), surface (0 m exactly), all 11 lakes ------------------------
 ## depth==0, NOT depth<=2: discrete sampled depths differ by lake, so <=2m is not like-for-like
 ## (see fig08/fig12). Same change applied there.
 doc <- fread("data/chem_north.csv")[lakeid %in% meta$lakeid & doc>0 & doc<80 & depth==0 &
@@ -97,7 +78,7 @@ doc[, `:=`(year=year4, date=as.Date(sampledate), doy=yday(as.Date(sampledate)))]
 docdate <- doc[doy>=SEASON[1] & doy<=SEASON[2], .(v=median(doc)), by=.(lakeid,date,year)]
 docyr   <- robz(annual(docdate))
 
-## ---------------- metric 4: Secchi (m), all 11 lakes -------------------------------------------------
+## ---------------- metric 3: Secchi (m), all 11 lakes -------------------------------------------------
 sec <- fread("data/secchi.csv")[lakeid %in% meta$lakeid &
                                 !(lakeid=="CR" & year4 %in% c(2012,2013))]
 sec[, `:=`(year=year4, date=as.Date(sampledate), doy=yday(as.Date(sampledate)))]
@@ -109,14 +90,14 @@ secyr <- rbind(secyr_view[lakeid %in% NORTH], secyr_nview[!lakeid %in% NORTH])
 
 ## ---------------- assemble: darkness anomaly (robust z, sign-flipped so + = darker) -----------------
 mk <- function(d, nm, flip=FALSE) d[, .(lakeid, year, metric=nm, darkness = if(flip) -z else z)]
-dat <- rbind(mk(kdyr,"Kd"), mk(colyr,"a440"), mk(docyr,"DOC"), mk(secyr,"Secchi", flip=TRUE))
+dat <- rbind(mk(kdyr,"Kd"), mk(docyr,"DOC"), mk(secyr,"Secchi", flip=TRUE))
 
 ## ---------------- trends, fit directly on the darkness anomaly (a per-lake affine transform of the
 ## raw value, so Kendall's p and the sign of "getting darker" are unchanged; slope is now in
 ## MAD/decade, directly comparable across metrics and lakes) ------------------------------------------
-tr <- function(nm, flip=FALSE){ d <- switch(nm, Kd=kdyr, a440=colyr, DOC=docyr, Secchi=secyr)
+tr <- function(nm, flip=FALSE){ d <- switch(nm, Kd=kdyr, DOC=docyr, Secchi=secyr)
   d[, { zz <- if(flip) -z else z; f<-senfit(zz, year); .(metric=nm, slope=f$slope*10, p=f$p, nyr=f$n) }, by=lakeid] }
-fits <- rbind(tr("Kd"), tr("a440"), tr("DOC"), tr("Secchi", flip=TRUE))
+fits <- rbind(tr("Kd"), tr("DOC"), tr("Secchi", flip=TRUE))
 fw <- dcast(fits, lakeid ~ metric, value.var=c("slope","p","nyr"))
 fw <- merge(fw, meta, by="lakeid")
 
@@ -129,11 +110,10 @@ fwrite(tbl, "figures/fig02_trends_table.csv")
 cat("wrote figures/fig02_trends_table.csv\n")
 print(tbl, nrows=100)
 
-## ---------------- strip labels: 4 metrics for northern, 2 for southern lakes -----------------------
+## ---------------- strip labels: 3 metrics for northern, 2 for southern lakes -----------------------
 fw[, striplab_n := sprintf(
-      "<span style='font-size:7pt;font-weight:bold'>%s</span> (northern)<br>Kd %+.2f%s &middot; a440 %+.2f%s<br>DOC %+.2f%s &middot; Secchi %+.2f%s",
-      name, slope_Kd, star(p_Kd), slope_a440, star(p_a440),
-      slope_DOC, star(p_DOC), slope_Secchi, star(p_Secchi))]
+      "<span style='font-size:7pt;font-weight:bold'>%s</span> (northern)<br>Kd %+.2f%s &middot; DOC %+.2f%s &middot; Secchi %+.2f%s",
+      name, slope_Kd, star(p_Kd), slope_DOC, star(p_DOC), slope_Secchi, star(p_Secchi))]
 fw[, striplab_s := sprintf(
       "<span style='font-size:7pt;font-weight:bold'>%s</span> (southern)<br>DOC %+.2f%s &middot; Secchi %+.2f%s",
       name, slope_DOC, star(p_DOC), slope_Secchi, star(p_Secchi))]
@@ -148,10 +128,10 @@ segs <- dat[, { f<-senfit(darkness, year)
   by=.(lakeid,strip,metric)]
 segs[, solid := !is.na(p) & p<0.05]
 
-lv <- c("Kd  (light extinction)","a440  (CDOM colour)","DOC  (mg/L)","Secchi  (disk depth)")
-dat[,  metric := factor(metric, levels=c("Kd","a440","DOC","Secchi"), labels=lv)]
-segs[, metric := factor(metric, levels=c("Kd","a440","DOC","Secchi"), labels=lv)]
-pal <- setNames(c("#2b6a3d","#a1622f","#6a4c93","#1f6f9e"), lv)
+lv <- c("Kd  (light extinction)","DOC  (mg/L)","Secchi  (disk depth)")
+dat[,  metric := factor(metric, levels=c("Kd","DOC","Secchi"), labels=lv)]
+segs[, metric := factor(metric, levels=c("Kd","DOC","Secchi"), labels=lv)]
+pal <- setNames(c("#2b6a3d","#6a4c93","#1f6f9e"), lv)
 
 th <- theme_minimal(base_size=6.5) + theme(
   panel.grid.minor=element_blank(), panel.spacing=unit(0.4,"lines"),
@@ -186,12 +166,10 @@ write_captions <- function(new_caps){
 }
 caption <- paste0(
   "June-September, standardized trends: each lake's own annual series is centred on its own MEDIAN and scaled by its own MAD (median absolute deviation, ",
-  "robust to outliers), then oriented so POSITIVE = DARKER for every metric (Secchi is sign-flipped since low Secchi = dark water) -- this puts four metrics ",
-  "in different raw units, and lakes with only 2 of the 4 available, on one shared, fixed axis. Northern lakes (7): Kd (light extinction), CDOM a440 ",
-  "(colour), DOC, and Secchi (secview). Southern lakes (4): DOC and Secchi (secnview) only -- color.csv has no southern lakeids, and southern PAR profiles ",
-  "only start in 2019 (too short to trend).\n",
-  "Each point is the annual MEDIAN across sampling dates; lake-years with <3 sampling dates are dropped for Kd/DOC/Secchi (sampled 4-9x/summer); ",
-  "CDOM a440 is one integrated sample per year by design and is exempt.\n",
+  "robust to outliers), then oriented so POSITIVE = DARKER for every metric (Secchi is sign-flipped since low Secchi = dark water) -- this puts metrics in ",
+  "different raw units, and lakes with only 2 of the 3 available, on one shared, fixed axis. Northern lakes (7): Kd (light extinction), DOC, and Secchi ",
+  "(secview). Southern lakes (4): DOC and Secchi (secnview) only -- southern PAR profiles only start in 2019 (too short to trend).\n",
+  "Each point is the annual MEDIAN across sampling dates; lake-years with <3 sampling dates are dropped.\n",
   "Solid trend = significant (Theil-Sen slope / Mann-Kendall p<0.05); dashed = not significant. Labels: slope in MAD/decade (*<0.05 **<0.01 ***<0.001). ",
   "Crystal 2012-13 excluded (whole-lake mixing experiment). Full trend table with p-values: figures/fig02_trends_table.csv.")
 write_captions(data.table(file="figures/fig02_clarity_trends.png",

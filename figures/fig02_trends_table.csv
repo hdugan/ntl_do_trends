@@ -2,31 +2,24 @@ lakeid,name,region,metric,slope_mad_per_decade,p,sig,nyr
 AL,Allequash,Northern,DOC,-0.018,0.9095,FALSE,35
 AL,Allequash,Northern,Kd,0.006,0.9279,FALSE,44
 AL,Allequash,Northern,Secchi,-0.181,0.1339,FALSE,45
-AL,Allequash,Northern,a440,-0.184,0.2772,FALSE,32
 BM,Big Muskie,Northern,DOC,-0.45,0.0303,TRUE,36
 BM,Big Muskie,Northern,Kd,0.17,0.1932,FALSE,44
 BM,Big Muskie,Northern,Secchi,-0.056,0.5831,FALSE,45
-BM,Big Muskie,Northern,a440,-0.427,0.0198,TRUE,31
 CR,Crystal,Northern,DOC,0.506,0.001,TRUE,36
 CR,Crystal,Northern,Kd,0.542,0,TRUE,42
 CR,Crystal,Northern,Secchi,0.294,0.0378,TRUE,43
-CR,Crystal,Northern,a440,-0.501,0.0093,TRUE,29
 CB,Crystal Bog,Northern,DOC,0.59,1e-04,TRUE,37
 CB,Crystal Bog,Northern,Kd,0.518,8e-04,TRUE,38
 CB,Crystal Bog,Northern,Secchi,0.289,0.039,TRUE,45
-CB,Crystal Bog,Northern,a440,0.261,0.2501,FALSE,31
 SP,Sparkling,Northern,DOC,0.15,0.4718,FALSE,37
 SP,Sparkling,Northern,Kd,0.428,0.0178,TRUE,44
 SP,Sparkling,Northern,Secchi,0.193,0.0961,FALSE,45
-SP,Sparkling,Northern,a440,-0.198,0.4375,FALSE,31
 TR,Trout,Northern,DOC,0,0.9456,FALSE,36
 TR,Trout,Northern,Kd,-0.088,0.4504,FALSE,44
 TR,Trout,Northern,Secchi,-0.31,2e-04,TRUE,45
-TR,Trout,Northern,a440,-0.596,0.0018,TRUE,31
 TB,Trout Bog,Northern,DOC,0.582,0,TRUE,37
 TB,Trout Bog,Northern,Kd,0.55,0,TRUE,43
 TB,Trout Bog,Northern,Secchi,0.371,3e-04,TRUE,45
-TB,Trout Bog,Northern,a440,0.464,0.0058,TRUE,29
 FI,Fish,Southern,DOC,-0.752,0.0029,TRUE,23
 FI,Fish,Southern,Secchi,0.783,0.0034,TRUE,28
 ME,Mendota,Southern,DOC,-0.802,0,TRUE,27
