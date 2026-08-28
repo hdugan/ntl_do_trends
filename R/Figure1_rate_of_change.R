@@ -128,9 +128,10 @@ xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
 th <- theme_minimal(base_size=6.5) + theme(
   panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
-  legend.title=element_text(size=5.5), plot.title=element_text(face="bold",size=9.5),
+  legend.title=element_text(size=6.5), plot.title=element_text(face="bold",size=9.5),
   plot.subtitle=element_text(face="bold", size=6.5, color="grey30"),
-  axis.text=element_text(size=5),
+  axis.text=element_text(size=5), axis.text.x=element_text(size=6),
+  axis.title.y=element_text(size=7.5),
   strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
 
 block <- function(reg, vv, pal, right, ttl, sub){
@@ -143,7 +144,7 @@ block <- function(reg, vv, pal, right, ttl, sub){
     facet_grid2(strip ~ ., scales="free_y", switch=NULL, render_empty=FALSE) +
     scale_y_reverse(expand=c(0,0), breaks=scales::breaks_pretty(3)) + xsc + pal + th +
     labs(title=ttl, subtitle=sub, x=NULL, y=if(!right) "Depth (m)" else NULL) +
-    { if(!right) theme(strip.text.y=element_blank()) } +
+    { if(!right) theme(strip.text.y.right=element_blank()) } +
     { if(right) theme(axis.text.y=element_blank(), axis.title.y=element_blank()) }
 }
 ## Figure title + long explanatory paragraph are NOT drawn on the PNG (kept out of the image so
@@ -154,9 +155,9 @@ FIG_TITLE <- "Rate of change across Wisconsin's lakes: full-record trends by dep
 captions <- list()
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
-  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Wisconsin Lakes (forested)", "Trend in temperature")
+  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Wisconsin Lakes\n(forested)", "Trend in temperature")
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
-  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Wisconsin Lakes (agricultural/urban)", "Trend in temperature")
+  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Wisconsin Lakes\n(agricultural/urban)", "Trend in temperature")
   SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
   left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
