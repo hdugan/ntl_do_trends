@@ -18,4 +18,4 @@ its PNG(s) to `figures/`.
 | `fig12_rate_of_change.R` | `fig12_rate_mgL.png`, `fig12_rate_sat.png` — Theil-Sen trend heatmaps by depth & season, all 11 lakes |
 | `fig15_chl_profiles_aug.R` | `fig15_chl_profiles_aug.png` — August chlorophyll profiles |
 | `figS_BM_o2sat_panel.R` | `figS_BM_o2sat_1996-05.png` (+ legend) — Big Muskellunge O2 saturation panel |
-| `diag_profiles.R` | `figures/diagnostics/diag_<lake>_<bin>_profiles.png` — every individual temp & DO(%sat) profile, per lake x half-month bin (same bins as fig12), baseline (pre-2016) vs recent (2016-2025) |
+| `01_plot_profiles.R` | `figures/diagnostics/diag_<lake>_<bin>_profiles.png` — every individual temp & DO(%sat) profile, per lake x half-month bin (same bins as fig12), baseline (pre-2016) vs recent (2016-2025) |

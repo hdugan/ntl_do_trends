@@ -1,4 +1,4 @@
-## Pull raw data from EDI for the figures in this repo. Run once before the fig*.R / diag_profiles.R
+## Pull raw data from EDI for the figures in this repo. Run once before the fig*.R / 01_plot_profiles.R
 ## scripts (they all read data/<file>.csv directly). Re-run any time to refresh to the newest
 ## published revision of each package.
 suppressMessages({library(EDIutils); library(readr)})
@@ -84,4 +84,4 @@ chl <- readr::read_csv(file = raw, show_col_types = FALSE)
 readr::write_csv(chl, "data/chl.csv")
 cat("wrote data/chl.csv (", package_id, ")\n")
 
-cat("\nAll data pulled to data/. Run the fig*.R and diag_profiles.R scripts next.\n")
+cat("\nAll data pulled to data/. Run the fig*.R and 01_plot_profiles.R scripts next.\n")
