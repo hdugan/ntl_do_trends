@@ -68,29 +68,22 @@ w <- cell[!is.na(slope)]
 w[, sig := !is.na(p) & p<0.05]
 w <- merge(w, meta, by="lakeid")
 
-## ---- context arrows beside each lake name: surface DOC trend and Secchi trend ----------------
-## Same Apr-Nov window and Crystal exclusion as the panels, so the arrows describe the same
-## period the heatmaps do. DOC at 0 m exactly (the discrete depths sampled differ by lake, so
-## a <=2 m filter would not be like-for-like; see fig08/fig11).
-## Secchi uses secnview, NOT secview: secview is essentially northern-only here (Mendota 2 yrs,
-## Fish/Monona/Wingra 1 yr each), whereas secnview covers all 11 lakes for 30-45 yrs.
-sen2 <- function(y,x){ ok<-is.finite(y)&is.finite(x); y<-y[ok]; x<-x[ok]; n<-length(y)
-  if(n<8) return(list(slope=NA_real_,p=NA_real_))
-  s <- median(outer(y,y,"-")[lower.tri(diag(n))]/outer(x,x,"-")[lower.tri(diag(n))], na.rm=TRUE)
-  list(slope=s, p=suppressWarnings(cor.test(x,y,method="kendall")$p.value)) }
-
-dc <- fread("data/chem_north.csv")[lakeid %in% meta$lakeid & doc>0 & doc<80 & depth==0 &
-       (is.na(flagdoc)|flagdoc=="") & !(lakeid=="CR" & year4 %in% c(2012,2013))]
-dc[, doy := yday(as.Date(sampledate))]
-dcyr <- dc[doy>=91 & doy<=319, .(v=median(doc)), by=.(lakeid, year=year4)]
-
-sc <- fread("data/secchi.csv")[lakeid %in% meta$lakeid & !is.na(secnview) & secnview>0 &
-       !(lakeid=="CR" & year4 %in% c(2012,2013))]
-sc[, doy := yday(as.Date(sampledate))]
-scyr <- sc[doy>=91 & doy<=319, .(v=median(secnview)), by=.(lakeid, year=year4)]
-
-arrows <- merge(dcyr[, { f<-sen2(v,year); .(doc_s=f$slope, doc_p=f$p) }, by=lakeid],
-                scyr[, { f<-sen2(v,year); .(sec_s=f$slope, sec_p=f$p) }, by=lakeid], by="lakeid", all=TRUE)
+## ---- context arrows beside each lake name: surface DOC trend and Secchi trend -----------------
+## Pulled from figures/fig02_trends_table.csv (written by Figure2_clarity_trends.R) instead of
+## re-fit here -- one source of truth for the DOC/Secchi trend, not two slightly-different fits.
+## NOTE this changes the window from this figure's own Apr-mid Nov to fig02's June-Sept
+## (stratified season), and Secchi source from secnview-for-all-11 to fig02's region split
+## (secview north, secnview south) -- run Figure2_clarity_trends.R before this script.
+trends_path <- "figures/fig02_trends_table.csv"
+if(!file.exists(trends_path)) stop("figures/fig02_trends_table.csv not found -- run Figure2_clarity_trends.R first")
+t2 <- fread(trends_path)[metric %in% c("DOC","Secchi")]
+## fig02's slope is a DARKNESS-oriented z-score (sign-flipped for Secchi so + = darker); un-flip
+## Secchi back to its own raw direction (+ = deeper/clearer) to match this figure's "up = that
+## variable increased" glyph convention. DOC needs no flip (raw direction already = darker).
+t2[, raw_slope := fifelse(metric=="Secchi", -slope_mad_per_decade, slope_mad_per_decade)]
+arrows <- dcast(t2, lakeid ~ metric, value.var=c("raw_slope","p"))
+setnames(arrows, c("raw_slope_DOC","p_DOC","raw_slope_Secchi","p_Secchi"),
+         c("doc_s","doc_p","sec_s","sec_p"))
 ## brown up / blue down / grey X, coloured by DIRECTION of that variable (not by "darkening"):
 ## for DOC, up = more carbon; for Secchi, up = clearer water. Labelled so the two can't be confused.
 glyph <- function(s,p) fifelse(!is.na(p) & p<0.05 & s>0,
