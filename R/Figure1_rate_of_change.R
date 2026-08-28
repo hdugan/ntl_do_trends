@@ -102,7 +102,7 @@ arrows[, lab_md := sprintf("<span style='font-size:7pt'>DOC</span>%s&nbsp;&nbsp;
         glyph(doc_s,doc_p), glyph(sec_s,sec_p))]
 
 w <- merge(w, arrows[, .(lakeid, lab_md)], by="lakeid", all.x=TRUE)
-w[, striplab := sprintf("<span style='font-size:7pt'>%s</span><br>%s", name, fifelse(is.na(lab_md), "", lab_md))]
+w[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span><br>%s", name, fifelse(is.na(lab_md), "", lab_md))]
 ord <- unique(w[, .(name, striplab, region, zmax)])[order(region,-zmax)]$striplab
 w[, strip := factor(striplab, levels=ord)]
 
@@ -129,7 +129,7 @@ th <- theme_minimal(base_size=6.5) + theme(
   panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
   legend.title=element_text(size=5.5), plot.title=element_text(face="bold",size=9.5),
-  plot.subtitle=element_text(size=6.5, color="grey30"),
+  plot.subtitle=element_text(face="bold", size=6.5, color="grey30"),
   axis.text=element_text(size=5),
   strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
 
