@@ -59,7 +59,7 @@ th <- theme_minimal(base_size=6.5) + theme(
 
 g <- ggplot(do, aes(o2, depth, color=era)) +
   geom_path(linewidth=0.6) + geom_point(size=0.5) +
-  facet_wrap(~strip, scales="free_y", ncol=3) +
+  facet_wrap(~strip, scales="free_y", ncol=4) +
   scale_y_reverse() +
   scale_color_manual(values=pal, name=NULL) +
   labs(x="Dissolved oxygen (mg/L)", y="Depth (m)") +
