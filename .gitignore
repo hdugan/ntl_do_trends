@@ -1,3 +1,6 @@
+# Raw data pulled from EDI (regenerate with R/00_pull_data.R)
+data/
+
 # History files
 .Rhistory
 .Rapp.history

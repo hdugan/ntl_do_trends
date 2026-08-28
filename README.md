@@ -4,11 +4,14 @@ Selected figures and their generating R scripts from the North Temperate Lakes
 long-term record analysis (NTL-LTER, EDI packages 1, 29, 35). Split out from
 the main `BuoyExploration_Mendota` project.
 
-Each script under `R/` reads from a local `data/` folder (not included here —
-see the main project) and writes its PNG(s) to `figures/`.
+Run `R/00_pull_data.R` first — it pulls the newest revision of each needed
+EDI data package (via `EDIutils`) into a local `data/` folder (gitignored,
+not included here). Each figure script then reads from `data/` and writes
+its PNG(s) to `figures/`.
 
 | Script | Figure(s) |
 |---|---|
+| `00_pull_data.R` | (no figure) — downloads `data/profiles.csv`, `chem_north.csv`, `secchi.csv`, `color.csv`, `chl.csv` from EDI (NTL-LTER packages 29, 1, 31, 87, 35) |
 | `fig03_04_depthtime.R` | `fig03_northern_do/sat.png`, `fig04_southern_do/sat.png` — depth-time DO heatmaps, northern vs southern lakes |
 | `fig07_alllakes_metO2_aug.R` | `fig07_alllakes_metO2_aug.png` — metalimnetic O2 maxima, August, all lakes |
 | `fig11_light_attenuation.R` | `fig11_light_attenuation.png` — light attenuation vs DOC/Secchi |
