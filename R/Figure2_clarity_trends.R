@@ -118,7 +118,7 @@ fw[, striplab_s := sprintf(
       "<span style='font-size:7pt;font-weight:bold'>%s</span> (southern)<br>DOC %+.2f%s &middot; Secchi %+.2f%s",
       name, slope_DOC, star(p_DOC), slope_Secchi, star(p_Secchi))]
 fw[, striplab := fifelse(region=="Northern", striplab_n, striplab_s)]
-ord <- fw[order(region, name), striplab]
+ord <- fw[order(region, -zmax), striplab]  # same lake order as Figure1_rate_of_change.R
 fw[, strip := factor(striplab, levels=ord)]
 dat <- merge(dat, fw[,.(lakeid,strip,region)], by="lakeid")
 
