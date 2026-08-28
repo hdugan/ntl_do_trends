@@ -128,7 +128,7 @@ xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
 th <- theme_minimal(base_size=6.5) + theme(
   panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
-  legend.title=element_text(size=5.5), plot.title=element_text(face="bold",size=7.5),
+  legend.title=element_text(size=5.5), plot.title=element_text(face="bold",size=9.5),
   plot.subtitle=element_text(size=6.5, color="grey30"),
   axis.text=element_text(size=5),
   strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
