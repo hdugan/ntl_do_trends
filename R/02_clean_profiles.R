@@ -11,8 +11,9 @@
 ## Restricted to lakes with zmax > 10 m: in shallow lakes/bogs (Allequash, Trout Bog, Crystal
 ## Bog, Wingra) a jump like this over 1-2 m of depth is plausible real biogeochemistry, not a
 ## sensor glitch -- only in a deep, stratified lake is a jump at the very bottom implausible.
-## Also manually removes one whole bad-sensor DO profile (Sparkling 2004-08-16) spotted the
-## same way -- see the "manual removal" block below.
+## Also manually removes one whole bad-sensor DO profile (Sparkling 2004-08-16), and all
+## temp/DO for Crystal Lake in 2012-2013 (whole-lake mixing experiment) -- see the "manual
+## removal" blocks below.
 suppressMessages(library(data.table))
 
 TEMP_JUMP_MAX <- 5   # degC: max allowed increase at the single deepest reading vs the next-shallowest
@@ -69,16 +70,34 @@ manual <- prof[lakeid == manual_lake & sampledate == manual_date & is.finite(o2s
     reason = "manual_full_profile", o2_also_nulled = o2)]
 removed <- rbind(removed, manual)
 
-cat("=== Unrealistic / manually-flagged points removed ===\n")
-print(removed, nrows = nrow(removed))
+## --- manual removal: Crystal Lake 2012-2013, whole-lake mixing experiment ------------------
+## Crystal was experimentally whole-lake mixed in 2012-2013 (the source project's fig08/09/11/12
+## scripts already exclude these two years for the same reason). Temperature and DO during this
+## period reflect the manipulation, not natural dynamics, so all wtemp and o2/o2sat for CR in
+## 2012-2013 are removed here too -- an experimental artifact, not a sensor error, but treated
+## the same way so nothing downstream has to special-case it.
+cr_bad <- prof[lakeid == "CR" & year4 %in% c(2012, 2013)]
+manual2 <- rbind(
+  cr_bad[is.finite(wtemp), .(lakeid, sampledate, variable = "wtemp", depth, value = wtemp,
+    prev_depth = NA_real_, prev_value = NA_real_, jump = NA_real_,
+    reason = "manual_crystal_mixing_experiment", o2_also_nulled = NA_real_)],
+  cr_bad[is.finite(o2sat), .(lakeid, sampledate, variable = "o2sat", depth, value = o2sat,
+    prev_depth = NA_real_, prev_value = NA_real_, jump = NA_real_,
+    reason = "manual_crystal_mixing_experiment", o2_also_nulled = o2)]
+)
+removed <- rbind(removed, manual2)
 
-## null out the flagged value (row and other variables at that depth kept)
-for(i in seq_len(nrow(removed))){
-  v <- removed$variable[i]
-  cond <- prof$lakeid == removed$lakeid[i] & prof$sampledate == removed$sampledate[i] &
-          prof$depth == removed$depth[i]
-  prof[cond, (v) := NA_real_]
-  if(v == "o2sat") prof[cond, o2 := NA_real_]
+cat("=== Points removed, by reason x lake x variable ===\n")
+print(removed[, .N, by=.(reason, lakeid, variable)][order(reason, lakeid, variable)], nrows=100)
+cat(sprintf("\n(%d total; full detail in data/profiles_removed_points.csv)\n", nrow(removed)))
+
+## null out the flagged value (row and other variables at that depth kept), via a keyed join
+## rather than a per-row scan -- the Crystal 2012-13 removal alone is ~1800 rows
+setkey(prof, lakeid, sampledate, depth)
+for(v in unique(removed$variable)){
+  hits <- removed[variable == v, .(lakeid, sampledate, depth)]
+  prof[hits, (v) := NA_real_]
+  if(v == "o2sat") prof[hits, o2 := NA_real_]
 }
 
 fwrite(prof, "data/profiles_clean.csv")
