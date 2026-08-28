@@ -75,8 +75,8 @@ p <- ggplot(agg, aes(tbin, dbin)) +
     plot.margin = margin(2, 3, 1, 2)
   )
 
-ggsave("figures/figS_BM_o2sat_1996-05.png", p, width = 3, height = 2, dpi = 600, bg = "white")
-cat("wrote figures/figS_BM_o2sat_1996-05.png\n")
+ggsave("figures/figSD_BM_o2sat_1996-05.png", p, width = 3, height = 2, dpi = 600, bg = "white")
+cat("wrote figures/figSD_BM_o2sat_1996-05.png\n")
 
 ## same panel with a compact legend, in case it is needed standalone
 p2 <- p + theme(
@@ -84,8 +84,8 @@ p2 <- p + theme(
   legend.key.height = unit(0.42, "cm"), legend.title = element_text(size = 5.4),
   legend.text = element_text(size = 5), legend.margin = margin(0, 0, 0, 1)
 )
-ggsave("figures/figS_BM_o2sat_1996-05_legend.png", p2, width = 3, height = 2, dpi = 600, bg = "white")
-cat("wrote figures/figS_BM_o2sat_1996-05_legend.png\n")
+ggsave("figures/figSD_BM_o2sat_1996-05_legend.png", p2, width = 3, height = 2, dpi = 600, bg = "white")
+cat("wrote figures/figSD_BM_o2sat_1996-05_legend.png\n")
 
 cat(
   "\ncells drawn:", nrow(agg), " | greyed (<", MIN_YEARS, "yrs):", sum(is.na(agg$m)),

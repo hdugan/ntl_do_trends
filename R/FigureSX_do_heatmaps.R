@@ -91,7 +91,7 @@ subS <- function(my) sprintf("Outlines on 2016–25 only: yellow = DO significan
 nb <- c(1985,1995,2005,2015,2025); nl <- c("1986–95","1996–05","2006–15","2016–25")
 sb <- c(1995,2005,2015,2025);      sl <- c("1996–05","2006–15","2016–25")
 
-build("o2",    "Northern", nb, nl, "Northern NTL lakes: dissolved oxygen (mg/L) by depth & season", subN(MIN_YEARS), pal_do,  "figures/fig03_northern_do.png",  15, 13)
-build("o2sat", "Northern", nb, nl, "Northern NTL lakes: oxygen saturation (%) by depth & season",    subN(MIN_YEARS), pal_sat, "figures/fig03_northern_sat.png", 15, 13)
-build("o2",    "Southern", sb, sl, "Southern NTL lakes: dissolved oxygen (mg/L) by depth & season",   subS(MIN_YEARS), pal_do,  "figures/fig04_southern_do.png",  12, 8.5)
-build("o2sat", "Southern", sb, sl, "Southern NTL lakes: oxygen saturation (%) by depth & season",     subS(MIN_YEARS), pal_sat, "figures/fig04_southern_sat.png", 12, 8.5)
+build("o2",    "Northern", nb, nl, "Northern NTL lakes: dissolved oxygen (mg/L) by depth & season", subN(MIN_YEARS), pal_do,  "figures/figSX_northern_do.png",  15, 13)
+build("o2sat", "Northern", nb, nl, "Northern NTL lakes: oxygen saturation (%) by depth & season",    subN(MIN_YEARS), pal_sat, "figures/figSX_northern_sat.png", 15, 13)
+build("o2",    "Southern", sb, sl, "Southern NTL lakes: dissolved oxygen (mg/L) by depth & season",   subS(MIN_YEARS), pal_do,  "figures/figSX_southern_do.png",  12, 8.5)
+build("o2sat", "Southern", sb, sl, "Southern NTL lakes: oxygen saturation (%) by depth & season",     subS(MIN_YEARS), pal_sat, "figures/figSX_southern_sat.png", 12, 8.5)
