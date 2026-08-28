@@ -26,7 +26,7 @@ which reads `figures/fig02_trends_table.csv` for its DOC/Secchi arrows.
 | `fig15_chl_profiles_aug.R` | `fig15_chl_profiles_aug.png` — August chlorophyll profiles |
 | `figS_BM_o2sat_panel.R` | `figS_BM_o2sat_1996-05.png` (+ legend) — Big Muskellunge O2 saturation panel |
 
-`Figure1_rate_of_change.R` and `Figure2_clarity_trends.R` don't draw an overall title/explainer
-on their PNGs (6.5x8in, 500dpi) — that text is written instead to the shared `figures/captions.csv`
+`Figure1_rate_of_change.R` (6.5x8in) and `Figure2_clarity_trends.R` (6.5x6in), both 500dpi, don't
+draw an overall title/explainer on their PNGs — that text is written instead to the shared `figures/captions.csv`
 (columns: file, title, caption; each script merge-writes its own rows without clobbering the
 other's).

@@ -2,9 +2,9 @@ lakeid,name,region,metric,slope_mad_per_decade,p,sig,nyr
 AL,Allequash,Northern,DOC,-0.018,0.9095,FALSE,35
 AL,Allequash,Northern,Kd,0.006,0.9279,FALSE,44
 AL,Allequash,Northern,Secchi,-0.181,0.1339,FALSE,45
-BM,Big Muskie,Northern,DOC,-0.45,0.0303,TRUE,36
-BM,Big Muskie,Northern,Kd,0.17,0.1932,FALSE,44
-BM,Big Muskie,Northern,Secchi,-0.056,0.5831,FALSE,45
+BM,Big Muskellunge,Northern,DOC,-0.45,0.0303,TRUE,36
+BM,Big Muskellunge,Northern,Kd,0.17,0.1932,FALSE,44
+BM,Big Muskellunge,Northern,Secchi,-0.056,0.5831,FALSE,45
 CR,Crystal,Northern,DOC,0.506,0.001,TRUE,36
 CR,Crystal,Northern,Kd,0.542,0,TRUE,42
 CR,Crystal,Northern,Secchi,0.294,0.0378,TRUE,43

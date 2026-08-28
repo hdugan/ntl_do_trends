@@ -87,10 +87,10 @@ setnames(arrows, c("raw_slope_DOC","p_DOC","raw_slope_Secchi","p_Secchi"),
 ## brown up / blue down / grey X, coloured by DIRECTION of that variable (not by "darkening"):
 ## for DOC, up = more carbon; for Secchi, up = clearer water. Labelled so the two can't be confused.
 glyph <- function(s,p) fifelse(!is.na(p) & p<0.05 & s>0,
-    "<span style='color:#a1622f;font-weight:bold'>&#8593;</span>",
+    "<span style='color:#a1622f;font-weight:bold;font-size:12pt'>&#8593;</span>",
   fifelse(!is.na(p) & p<0.05 & s<0,
-    "<span style='color:#1f6f9e;font-weight:bold'>&#8595;</span>",
-    "<span style='color:#9a9a9a;font-weight:bold'>&#10005;</span>"))
+    "<span style='color:#1f6f9e;font-weight:bold;font-size:12pt'>&#8595;</span>",
+    "<span style='color:#9a9a9a;font-weight:bold;font-size:9pt'>&#10005;</span>"))
 arrows[, lab_md := sprintf("<span style='font-size:7pt'>DOC</span>%s&nbsp;&nbsp;<span style='font-size:7pt'>Sec</span>%s",
         glyph(doc_s,doc_p), glyph(sec_s,sec_p))]
 

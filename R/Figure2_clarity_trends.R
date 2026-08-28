@@ -35,7 +35,7 @@ annual <- function(d, min_obs=MIN_OBS)
 
 meta <- data.table(
   lakeid=c("TR","BM","CR","SP","AL","TB","CB","ME","MO","FI","WI"),
-  name  =c("Trout","Big Muskie","Crystal","Sparkling","Allequash","Trout Bog","Crystal Bog",
+  name  =c("Trout","Big Muskellunge","Crystal","Sparkling","Allequash","Trout Bog","Crystal Bog",
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
@@ -153,7 +153,7 @@ g <- ggplot(dat, aes(year, darkness, color=metric)) +
   scale_linetype_manual(values=c(`TRUE`="solid",`FALSE`="22"), guide="none") +
   labs(x=NULL, y="Clarity anomaly (MAD from lake median) — up = darker") +
   th
-ggsave("figures/fig02_clarity_trends.png", g, width=6.5, height=8, dpi=500, bg="white")
+ggsave("figures/fig02_clarity_trends.png", g, width=6.5, height=6, dpi=500, bg="white")
 cat("wrote figures/fig02_clarity_trends.png\n")
 
 ## Title + long explanatory paragraph are NOT drawn on the PNG -- written to the shared
