@@ -14,7 +14,7 @@ ERA <- "1996–05"
 brk <- c(1985, 1995, 2005, 2015, 2025) # northern-lake era breaks (fig03)
 labs4 <- c("1986–95", "1996–05", "2006–15", "2016–25")
 
-prof <- fread("data/profiles.csv")[lakeid == LAKE]
+prof <- fread("data/profiles_clean.csv")[lakeid == LAKE]
 prof[, `:=`(date = as.Date(sampledate), doy = yday(as.Date(sampledate)), year = year4)]
 prof <- prof[doy >= 105 & doy <= 310]
 prof <- prof[is.finite(o2sat)]

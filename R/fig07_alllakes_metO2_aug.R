@@ -15,7 +15,7 @@ tro <- c(oligotrophic="oligotrophic",mesotrophic="mesotrophic",dystrophic="dystr
 early<-"#2c7fb8"; recent<-"#d7301f"
 
 ## Crystal 2012-13 dropped everywhere: whole-lake mixing experiment, not natural conditions
-p <- fread("data/profiles.csv")[lakeid %in% meta$lakeid & !is.na(o2) &
+p <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid & !is.na(o2) &
                                 !(lakeid=="CR" & year4 %in% c(2012,2013))]
 p[, `:=`(month=month(as.Date(sampledate)), year=year4)]
 p <- p[month==8]                                            # August only

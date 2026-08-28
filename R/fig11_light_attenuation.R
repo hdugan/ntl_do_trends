@@ -52,7 +52,7 @@ senfit <- function(y, x){
 star <- function(p) ifelse(is.na(p),"", ifelse(p<0.001,"***", ifelse(p<0.01,"**", ifelse(p<0.05,"*",""))))
 
 ## ---------------- metric 1: Kd (m^-1), slope of ln(fraction surface PAR) vs depth, thru origin ----
-p <- fread("data/profiles.csv")[lakeid %in% meta$lakeid & !is.na(frlight) & frlight>0 & depth>0.1 &
+p <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid & !is.na(frlight) & frlight>0 & depth>0.1 &
                                 !(lakeid=="CR" & year4 %in% c(2012,2013))]
 p[, `:=`(year=year4, doy=yday(as.Date(sampledate)), date=as.Date(sampledate))]
 p <- p[doy>=SEASON[1] & doy<=SEASON[2]]

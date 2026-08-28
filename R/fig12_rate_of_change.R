@@ -14,7 +14,7 @@ meta <- data.table(
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
 
-prof <- fread("data/profiles.csv")[lakeid %in% meta$lakeid]
+prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15
 

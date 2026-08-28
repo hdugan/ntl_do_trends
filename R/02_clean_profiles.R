@@ -1,4 +1,6 @@
-## Clean unrealistic bottom-point jumps out of data/profiles.csv (in place).
+## Clean unrealistic bottom-point jumps out of data/profiles.csv -> data/profiles_clean.csv.
+## Raw data/profiles.csv (as pulled by 00_pull_data.R) is left untouched; the fig*.R scripts
+## read the cleaned file instead.
 ## Spot-checked in the diagnostic plots (01_plot_profiles.R): a handful of casts have a single
 ## deepest reading that jumps sharply UP from the next-shallowest reading -- e.g. ME 2022-07-13
 ## (o2sat 8.3 -> 102.4 %sat at the bottom) and MO 2001-10-22 (wtemp 12.7 -> 21.7 degC at the
@@ -6,10 +8,20 @@
 ## stratified lake, and DO doesn't suddenly reaerate at the deepest point. Reads as a sensor
 ## glitch on the last reading of the cast, so only that single value is nulled -- the rest of
 ## the cast (and the other variable at that same depth) is left untouched.
+## Restricted to lakes with zmax > 10 m: in shallow lakes/bogs (Allequash, Trout Bog, Crystal
+## Bog, Wingra) a jump like this over 1-2 m of depth is plausible real biogeochemistry, not a
+## sensor glitch -- only in a deep, stratified lake is a jump at the very bottom implausible.
 suppressMessages(library(data.table))
 
 TEMP_JUMP_MAX <- 5   # degC: max allowed increase at the single deepest reading vs the next-shallowest
 DO_JUMP_MAX   <- 20  # %sat: max allowed increase at the single deepest reading vs the next-shallowest
+ZMAX_MIN      <- 10  # m: only apply the check to lakes deeper than this
+
+## max depth (m) of each of the 11 NTL primary study lakes, same values used in fig12
+zmax <- data.table(
+  lakeid=c("TR","BM","CR","SP","AL","TB","CB","ME","MO","FI","WI"),
+  zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+deep_lakes <- zmax[zmax > ZMAX_MIN, lakeid]
 
 prof <- fread("data/profiles.csv")
 
@@ -26,8 +38,8 @@ flag_bottom_jump <- function(dt, var, thresh){
 }
 
 removed <- rbind(
-  flag_bottom_jump(prof, "wtemp", TEMP_JUMP_MAX),
-  flag_bottom_jump(prof, "o2sat", DO_JUMP_MAX)
+  flag_bottom_jump(prof[lakeid %in% deep_lakes], "wtemp", TEMP_JUMP_MAX),
+  flag_bottom_jump(prof[lakeid %in% deep_lakes], "o2sat", DO_JUMP_MAX)
 )
 setorder(removed, variable, lakeid, sampledate)
 
@@ -52,7 +64,7 @@ for(i in seq_len(nrow(removed))){
   if(v == "o2sat") prof[cond, o2 := NA_real_]
 }
 
-fwrite(prof, "data/profiles.csv")
+fwrite(prof, "data/profiles_clean.csv")
 fwrite(removed, "data/profiles_removed_points.csv")
-cat(sprintf("\nRemoved %d point(s). Overwrote data/profiles.csv; logged to data/profiles_removed_points.csv\n",
+cat(sprintf("\nRemoved %d point(s). Wrote data/profiles_clean.csv; logged to data/profiles_removed_points.csv\n",
             nrow(removed)))

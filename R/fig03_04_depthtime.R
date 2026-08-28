@@ -12,7 +12,7 @@ meta <- data.table(
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
 tro <- c(oligotrophic="oligotrophic",mesotrophic="mesotrophic",dystrophic="dystrophic (bog)",eutrophic="eutrophic")
 
-prof <- fread("data/profiles.csv")[lakeid %in% meta$lakeid]
+prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[doy>=105 & doy<=310 & !(lakeid=="CR" & year %in% c(2012,2013))]  # drop Crystal mixing yrs
 prof <- merge(prof, meta, by="lakeid")
