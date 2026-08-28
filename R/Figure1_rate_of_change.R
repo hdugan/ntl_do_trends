@@ -9,7 +9,7 @@ suppressMessages({library(data.table); library(ggplot2); library(scales); librar
 
 meta <- data.table(
   lakeid=c("TR","BM","CR","SP","AL","TB","CB","ME","MO","FI","WI"),
-  name  =c("Trout","Big Muskellunge","Crystal","Sparkling","Allequash","Trout Bog","Crystal Bog",
+  name  =c("Trout","Big Muskie","Crystal","Sparkling","Allequash","Trout Bog","Crystal Bog",
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
@@ -94,15 +94,15 @@ arrows <- merge(dcyr[, { f<-sen2(v,year); .(doc_s=f$slope, doc_p=f$p) }, by=lake
 ## brown up / blue down / grey X, coloured by DIRECTION of that variable (not by "darkening"):
 ## for DOC, up = more carbon; for Secchi, up = clearer water. Labelled so the two can't be confused.
 glyph <- function(s,p) fifelse(!is.na(p) & p<0.05 & s>0,
-    "<span style='color:#a1622f'>&#8593;</span>",
+    "<span style='color:#a1622f;font-weight:bold'>&#8593;</span>",
   fifelse(!is.na(p) & p<0.05 & s<0,
-    "<span style='color:#1f6f9e'>&#8595;</span>",
-    "<span style='color:#9a9a9a'>&#10005;</span>"))
+    "<span style='color:#1f6f9e;font-weight:bold'>&#8595;</span>",
+    "<span style='color:#9a9a9a;font-weight:bold'>&#10005;</span>"))
 arrows[, lab_md := sprintf("<span style='font-size:7pt'>DOC</span>%s&nbsp;&nbsp;<span style='font-size:7pt'>Sec</span>%s",
         glyph(doc_s,doc_p), glyph(sec_s,sec_p))]
 
 w <- merge(w, arrows[, .(lakeid, lab_md)], by="lakeid", all.x=TRUE)
-w[, striplab := sprintf("%s<br>%s", name, fifelse(is.na(lab_md), "", lab_md))]
+w[, striplab := sprintf("<span style='font-size:7pt'>%s</span><br>%s", name, fifelse(is.na(lab_md), "", lab_md))]
 ord <- unique(w[, .(name, striplab, region, zmax)])[order(region,-zmax)]$striplab
 w[, strip := factor(striplab, levels=ord)]
 
@@ -124,7 +124,7 @@ xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
                           labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
                           minor_breaks=NULL, expand=c(0,0))
 ## text sizes scaled down for the 6.5in-wide output (was 12in) so panel titles like
-## "NORTHERN LAKES · Trout Lake district" fit without clipping
+## "Northern Wisconsin Lakes (forested)" fit without clipping
 th <- theme_minimal(base_size=6.5) + theme(
   panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
@@ -148,15 +148,15 @@ block <- function(reg, vv, pal, right, ttl, sub){
 }
 ## Figure title + long explanatory paragraph are NOT drawn on the PNG (kept out of the image so
 ## the figure can be captioned in a manuscript/report instead) -- collected here and written to
-## figures/fig01_captions.csv alongside the panel-level labels ("NORTHERN LAKES ...", "Trend in
+## figures/fig01_captions.csv alongside the panel-level labels ("Northern Wisconsin Lakes...", "Trend in
 ## temperature", etc.), which DO stay on the PNG since they're needed to tell the panels apart.
 FIG_TITLE <- "Rate of change across Wisconsin's lakes: full-record trends by depth & season"
 captions <- list()
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
-  NT <- block("Northern","wtemp", pal_T, FALSE, "NORTHERN LAKES · Trout Lake district", "Trend in temperature")
+  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Wisconsin Lakes (forested)", "Trend in temperature")
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
-  ST <- block("Southern","wtemp", pal_T, FALSE, "SOUTHERN LAKES · Madison", "Trend in temperature")
+  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Wisconsin Lakes (agricultural/urban)", "Trend in temperature")
   SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
   left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
