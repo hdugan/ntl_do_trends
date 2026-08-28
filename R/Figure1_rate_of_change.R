@@ -163,9 +163,9 @@ yrs <- range(prof$year)
 base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant (Mann-Kendall p<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.\nBeside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
    yrs[1], yrs[2], MIN_YR_TREND, MIN_SPAN)
 make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
-  paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig12_rate_mgL.png")
+  paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig01_rate_mgL.png")
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
-  paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig12_rate_sat.png")
+  paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig01_rate_sat.png")
 
 ## Console summary. NOTE: deliberately summarises ALL cells, not just the significant ones.
 ## Taking the median over only p<0.05 cells is selection-biased (winner's curse) -- conditioning on
