@@ -6,6 +6,10 @@
 ## 1995-2005 vs 2016-2025). No anoxic-boundary or metalimnetic-O2-max annotations here -- just the
 ## raw shape of the four profiles; that annotation layer can come back once the 4-era shape is
 ## worth quantifying that way.
+##
+## Also writes a second figure, fig03_o2_profiles_leveladjusted.png: the same decade-median
+## approach for just Crystal/Sparkling/Big Muskellunge, but with each cast's depth adjusted for
+## that day's lake level (EDI 30) before pooling -- see the block near the end of this script.
 suppressMessages({library(data.table); library(ggplot2); library(ggtext); library(patchwork)})
 
 meta <- data.table(
@@ -121,3 +125,62 @@ caption <- paste0(
   "or weakening subsurface O2 peak) can be read directly from how the four lines separate.")
 write_captions(data.table(file="figures/fig03_o2_profiles.png",
   title="August dissolved-oxygen profiles by decade", caption=caption))
+
+## ============================================================================================
+## Additional panel: CR, SP, BM only, depth adjusted for lake-level change. Data: EDI 30.
+## These 3 are unconfined seepage lakes with multi-metre level swings over the record (BM ~2.1 m,
+## CR ~2.0 m, SP ~1.75 m range) driven by regional groundwater/climate, not by anything internal
+## to the lake. Raw depth is measured down from whatever the water surface happened to be that
+## day, so two casts read as "10 m" can be probing different absolute elevations if the lake
+## surface itself has shifted between them -- a level change can therefore masquerade as (or mask)
+## a real change in where a feature like a hypoxic boundary sits.
+## Each lake's level is interpolated to the cast date (linear, between the two nearest lake-level
+## survey dates) and referenced to that lake's own median level over the full record:
+##   adjusted_depth = raw_depth - (level_at_cast - reference_level)
+## so a given raw depth reading is expressed as depth-below-the-long-term-average-surface instead
+## of depth-below-whatever-the-surface-was-that-day. Everything else (August only, decade bins,
+## per-depth median, colours) matches the main figure above.
+ll <- fread("data/lake_levels.csv")[lakeid %in% c("CR","SP","BM")]
+setorder(ll, lakeid, sampledate)
+level_at <- function(lk, dates){
+  d <- ll[lakeid==lk]
+  approx(as.numeric(d$sampledate), d$llevel_elevation, xout=as.numeric(dates), rule=2)$y
+}
+ref_level <- ll[, .(ref=median(llevel_elevation)), by=lakeid]
+
+p3 <- p[lakeid %in% c("CR","SP","BM")]
+p3[, level := level_at(lakeid[1], as.Date(sampledate)), by=lakeid]
+p3 <- merge(p3, ref_level, by="lakeid")
+p3[, adj_depth := depth - (level - ref)]
+
+do3 <- p3[, .(o2sat=median(o2sat)), by=.(lakeid, era, depth=round(adj_depth))]
+do3 <- merge(do3, meta, by="lakeid")
+setorder(do3, lakeid, era, depth)
+
+lab_by_lake <- setNames(sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span> (level-adjusted)",
+                                 meta$name), meta$lakeid)
+ord3 <- lab_by_lake[meta[lakeid %in% c("CR","SP","BM")][order(-zmax), lakeid]]
+do3[, strip := factor(lab_by_lake[lakeid], levels=ord3)]
+
+g3 <- ggplot(do3, aes(o2sat, depth, color=era)) +
+  geom_path(linewidth=0.6) + geom_point(size=0.5) +
+  facet_wrap(~strip, ncol=3) +
+  scale_x_continuous(breaks=c(0,50,100)) + scale_y_reverse() +
+  scale_color_manual(values=pal, name=NULL, drop=FALSE, limits=lv) +
+  labs(x="Dissolved oxygen (% sat)", y="Depth below long-term median lake level (m)") +
+  th + theme(legend.position="bottom", plot.title=element_blank(),
+             strip.text=element_markdown(size=5.5, lineheight=1.2))
+ggsave("figures/fig03_o2_profiles_leveladjusted.png", g3, width=6.5, height=2.7, dpi=500, bg="white")
+cat("wrote figures/fig03_o2_profiles_leveladjusted.png\n")
+
+caption3 <- paste0(
+  "August DO (% sat) depth profile, Crystal/Sparkling/Big Muskellunge only, same four decade ",
+  "medians as fig03_o2_profiles.png but with depth adjusted for lake-level change before pooling: ",
+  "each cast's depth is shifted by (that day's interpolated lake level minus the lake's own ",
+  "median level over the full 1981-2025 record), so depth reads as distance below the long-term ",
+  "average surface rather than below whatever the surface happened to be that day. These three are ",
+  "unconfined seepage lakes with multi-metre level swings (BM ~2.1 m, CR ~2.0 m, SP ~1.75 m range) ",
+  "driven by regional groundwater/climate; lake level is interpolated linearly to each cast date ",
+  "from data/lake_levels.csv (EDI 30), between the two nearest survey dates.")
+write_captions(data.table(file="figures/fig03_o2_profiles_leveladjusted.png",
+  title="Level-adjusted August DO profiles: Crystal, Sparkling, Big Muskellunge", caption=caption3))
