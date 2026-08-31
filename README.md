@@ -16,7 +16,7 @@ which reads `figures/fig02_trends_table.csv` for its DOC/Secchi arrows.
 
 | Script | Figure(s) |
 |---|---|
-| `00_pull_data.R` | (no figure) — downloads `data/profiles.csv`, `chem_north.csv`, `secchi.csv`, `color.csv`, `chl.csv` from EDI (NTL-LTER packages 29, 1, 31, 87, 35) |
+| `00_pull_data.R` | (no figure) — downloads `data/profiles.csv`, `chem_north.csv`, `secchi.csv`, `color.csv`, `chl.csv`, `lake_levels.csv` from EDI (NTL-LTER packages 29, 1, 31, 87, 35, 30). `lake_levels.csv` covers the 7 northern lakes only (AL, BM, CB, CR, SP, TB, TR) — not currently used by any figure script |
 | `01_plot_profiles.R` | `figures/diagnostics/diag_<lake>_<bin>_profiles.png` — every individual temp & DO(%sat) profile, per lake x half-month bin (same bins as fig12), baseline (pre-2016) vs recent (2016-2025) |
 | `02_clean_profiles.R` | (no figure) — for lakes with zmax > 10 m, removes unrealistic bottom-point jumps (temp up >5°C or DO up >20 %sat at the single deepest reading vs the next-shallowest); plus manual removals: one bad-sensor DO profile (Sparkling 2004-08-16) and all temp/DO for Crystal Lake 2012-2013 (whole-lake mixing experiment); writes `data/profiles_clean.csv` and logs removed points to `data/profiles_removed_points.csv` |
 | `FigureSX_do_heatmaps.R` | `figSX_northern_do/sat.png`, `figSX_southern_do/sat.png` — depth-time DO heatmaps, northern vs southern lakes |

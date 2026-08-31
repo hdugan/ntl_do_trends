@@ -84,4 +84,22 @@ chl <- readr::read_csv(file = raw, show_col_types = FALSE)
 readr::write_csv(chl, "data/chl.csv")
 cat("wrote data/chl.csv (", package_id, ")\n")
 
+## --- Lake Levels (northern lakes only: AL, BM, CB, CR, SP, TB, TR) -> data/lake_levels.csv ---
+## Package has two entities (Lake Levels / Lake Levels - High Frequency); entityId[1] is the
+## classic long-term survey, matching the sampling cadence of the other datasets pulled here.
+## Magnuson, J.J., S.R. Carpenter, and E.H. Stanley. 2026. North Temperate Lakes LTER: Lake
+## Levels 1981 - current ver 30. Environmental Data Initiative.
+## https://doi.org/10.6073/pasta/01192956c5f8ebd5b6cb839c081a78e8. Accessed 2026-08-31.
+revision <- list_data_package_revisions(
+  scope = "knb-lter-ntl",
+  identifier = "30",
+  filter = "newest"
+)
+package_id <- paste("knb-lter-ntl", "30", revision, sep = ".")
+res <- read_data_entity_names(package_id)
+raw <- read_data_entity(package_id, entityId = res$entityId[1])
+lake_levels <- readr::read_csv(file = raw, show_col_types = FALSE)
+readr::write_csv(lake_levels, "data/lake_levels.csv")
+cat("wrote data/lake_levels.csv (", package_id, ")\n")
+
 cat("\nAll data pulled to data/. Run the fig*.R and 01_plot_profiles.R scripts next.\n")
