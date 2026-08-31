@@ -59,7 +59,7 @@ lines <- c(
 region_prev <- NULL
 for (i in seq_len(nrow(lakes))) {
   r <- lakes[i]
-  if (!is.null(region_prev) && r$region != region_prev) lines <- c(lines, "\\addlinespace")
+  if (!is.null(region_prev) && r$region != region_prev) lines <- c(lines, "\\hline")
   lines <- c(lines, sprintf(
     "%s & %s & %s & %s & %s & %s & %s \\\\",
     r$waterbody_name,

@@ -18,12 +18,22 @@ prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15
 
-## long over the variables, interpolate each cast to 0.5 m, half-month bins (same as fig09)
+## Per-region year range for the panel titles -- Southern lakes join the record later
+## (1995/96) than Northern (1981), so these must NOT share a single hardcoded range.
+ryrs <- merge(prof[, .(lakeid, year)], meta[, .(lakeid, region)], by = "lakeid")[
+  , .(lo = min(year), hi = max(year)), by = region]
+nyr <- ryrs[region == "Northern"]; syr <- ryrs[region == "Southern"]
+
+## long over the variables, interpolate each cast to depth bins (half-month bins, same as fig09).
+## Bin width is 0.5 m for lakes under 10 m (zmax) and 1 m for deeper lakes -- at 0.5 m throughout,
+## the deep lakes' water columns rendered far denser than the pattern actually resolves.
+zmax_lookup <- setNames(meta$zmax, meta$lakeid)
 pm <- melt(prof[,.(lakeid,date,doy,year,depth,wtemp,o2,o2sat)],
            id.vars=c("lakeid","date","doy","year","depth"), variable.name="var", value.name="val")
 pm <- pm[is.finite(val)]
 g <- pm[, { o<-order(depth); dd<-depth[o]; yy<-val[o]
-  if(length(dd)>=3 && diff(range(dd))>=1){ zg<-seq(0,max(dd),0.5); zg<-zg[zg>=min(dd)]
+  dstep <- if(zmax_lookup[[lakeid]] < 10) 0.5 else 1
+  if(length(dd)>=3 && diff(range(dd))>=1){ zg<-seq(0,max(dd),dstep); zg<-zg[zg>=min(dd)]
     .(dbin=zg, val=approx(dd,yy,zg,rule=2)$y) } else .(dbin=numeric(0),val=numeric(0)) },
   by=.(lakeid,date,doy,year,var)]
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)  # Apr 1 - Nov 16
@@ -64,9 +74,20 @@ cell <- yr[, { n<-.N; sp<- if(n>0) diff(range(year)) else 0
                        error=function(e) NA_real_), nyr=n)
   } else .(slope=NA_real_, p=NA_real_, nyr=n) },
   by=.(lakeid,var,tbin,twidth,dbin)]
+
+## Benjamini-Hochberg FDR correction, per lake (pooling all its depth x time-bin x variable
+## cells into one family, computed once here so wtemp's q-values don't differ between the
+## mg/L and %sat output figures). With ~14k Mann-Kendall tests across the whole figure,
+## uncorrected p<0.05 alone would flag hundreds of cells by chance; Bonferroni would be overly
+## conservative given how correlated neighboring cells are (same casts interpolated to adjacent
+## depths, overlapping years between time bins) -- BH controls the expected false-discovery
+## proportion instead, the standard fix for many correlated tests shown as a significance grid.
+cell[!is.na(p), q := p.adjust(p, method="BH"), by=lakeid]
+
 w <- cell[!is.na(slope)]
-w[, sig := !is.na(p) & p<0.05]
+w[, sig := !is.na(q) & q<0.05]
 w <- merge(w, meta, by="lakeid")
+w[, dstep := fifelse(zmax<10, 0.5, 1)]  # matches the depth-bin width used to build dbin above
 
 ## ---- context arrows beside each lake name: surface DOC trend and Secchi trend -----------------
 ## Pulled from figures/fig02_trends_table.csv (written by Figure2_clarity_trends.R) instead of
@@ -102,7 +123,7 @@ w[, strip := factor(striplab, levels=ord)]
 ## Non-significant cells get a light diagonal stroke (one per tile). This is deliberately a plain
 ## geom_segment rather than ggpattern: ggpattern rasterizes every tile separately and takes many
 ## minutes at these tile counts (~14k cells), whereas segments stay vector and render instantly.
-hatch <- function(d) d[sig==FALSE, .(x=tbin-twidth/2, xend=tbin+twidth/2, y=dbin-0.25, yend=dbin+0.25, strip)]
+hatch <- function(d) d[sig==FALSE, .(x=tbin-twidth/2, xend=tbin+twidth/2, y=dbin-dstep/2, yend=dbin+dstep/2, strip)]
 
 ## diverging palettes centred on zero rate; limits from the observed 5-95% spread, extremes squished
 pal_T <- scale_fill_gradientn(colours=c("#2166ac","#4393c3","#92c5de","#d1e5f0","#f7f7f7","#fddbc7","#f4a582","#d6604d","#b2182b"),
@@ -130,7 +151,7 @@ th <- theme_minimal(base_size=6.5) + theme(
 block <- function(reg, vv, pal, right, ttl, sub){
   d <- w[region==reg & var==vv]
   ggplot(d, aes(tbin,dbin,fill=slope)) +
-    geom_tile(aes(width=twidth), height=0.5) +
+    geom_tile(aes(width=twidth, height=dstep)) +
     geom_segment(data=hatch(d), aes(x=x,xend=xend,y=y,yend=yend), inherit.aes=FALSE,
                  color="grey25", linewidth=0.16, alpha=0.5) +
     geom_vline(xintercept=mbound, color="white", linewidth=0.3, alpha=0.8) +
@@ -157,9 +178,9 @@ write_captions <- function(new_caps){
 }
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
-  NT <- block("Northern","wtemp", pal_T, FALSE, "Northern Forested Lakes", "Trend in temperature")
+  NT <- block("Northern","wtemp", pal_T, FALSE, sprintf("Northern Forested Lakes (%d–%d)", nyr$lo, nyr$hi), "Trend in temperature")
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
-  ST <- block("Southern","wtemp", pal_T, FALSE, "Southern Agricultural/Urban Lakes", "Trend in temperature")
+  ST <- block("Southern","wtemp", pal_T, FALSE, sprintf("Southern Ag/Urban Lakes (%d–%d)", syr$lo, syr$hi), "Trend in temperature")
   SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
   left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
@@ -170,7 +191,7 @@ make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
 }
 
 yrs <- range(prof$year)
-base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant (Mann-Kendall p<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.\nBeside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
+base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant after Benjamini-Hochberg FDR correction (per lake, across all its depth/time/variable cells; Mann-Kendall q<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.\nBeside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
    yrs[1], yrs[2], MIN_YR_TREND, MIN_SPAN)
 make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
   paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig01_rate_mgL.png")
@@ -180,7 +201,7 @@ make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
 write_captions(rbindlist(captions))
 
 ## Console summary. NOTE: deliberately summarises ALL cells, not just the significant ones.
-## Taking the median over only p<0.05 cells is selection-biased (winner's curse) -- conditioning on
+## Taking the median over only q<0.05 cells is selection-biased (winner's curse) -- conditioning on
 ## significance preferentially keeps large-magnitude slopes. For Wingra wtemp that inflated the
 ## median from +0.24 to +1.34 C/decade, ~5.6x. Report the unconditional rate, and report the
 ## fraction significant separately as the evidence-strength measure.
