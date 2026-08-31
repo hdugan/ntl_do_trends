@@ -1,13 +1,13 @@
-## Fig 5: habitability status by depth window x month, all 11 NTL lakes. Data: EDI 29.
-## For each lake x depth bin x month (Apr-Nov), compares median DO (mg/L) in two eras -- baseline
-## (pre-2016) vs recent (2016-2025) -- against the 3 mg/L cold/coolwater-fish habitat threshold,
-## and classifies the transition into one of four states:
+## Fig 5: habitability status by depth window x half-month period, all 11 NTL lakes. Data: EDI 29.
+## For each lake x depth bin x half-month period (same Apr1-Nov16 edges as Figure1_rate_of_change.R),
+## compares median DO (mg/L) in two eras -- baseline (pre-2016) vs recent (2016-2025) -- against the
+## 3 mg/L cold/coolwater-fish habitat threshold, and classifies the transition into one of four states:
 ##   remained  < 3 mg/L : chronically hypoxic, unhabitable in both eras
 ##   became    < 3 mg/L : newly hypoxic -- lost habitat
 ##   became   >= 3 mg/L : newly oxygenated -- gained habitat
 ##   remained >= 3 mg/L : stayed habitable in both eras
-## Drawn as a depth x month heatmap per lake (facet_wrap), so a lake's whole seasonal cycle of
-## habitat change is visible at once, not just its August snapshot.
+## Drawn as a depth x half-month heatmap per lake (facet_wrap), so a lake's whole seasonal cycle of
+## habitat change is visible at finer resolution than a monthly snapshot.
 suppressMessages({library(data.table); library(ggplot2); library(scales)})
 
 meta <- data.table(
@@ -24,8 +24,8 @@ MIN_YEARS <- 4           # a depth x month cell needs data from at least this ma
 ERA_BREAK <- 2016        # same baseline/recent split used elsewhere in this repo
 
 prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid & !is.na(o2)]
-prof[, `:=`(date=as.Date(sampledate), month=month(as.Date(sampledate)), year=year4)]
-prof <- prof[month>=4 & month<=11 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr-Nov, same season as Figure1
+prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
+prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15, same window as Figure1
 
 ## interpolate each cast to a depth grid: 0.5 m for lakes <10 m zmax, 1 m for deeper lakes --
 ## same rule used in Figure1_rate_of_change.R, so a "depth window" here means the same thing it
@@ -34,15 +34,20 @@ g <- prof[, { o<-order(depth); dd<-depth[o]; yy<-o2[o]
   dstep <- if(zmax_lookup[[lakeid]] < 10) 0.5 else 1
   if(length(dd)>=3 && diff(range(dd))>=1){ zg<-seq(0,max(dd),dstep); zg<-zg[zg>=min(dd)]
     .(dbin=zg, dstep=dstep, val=approx(dd,yy,zg,rule=2)$y) } else .(dbin=numeric(0),dstep=numeric(0),val=numeric(0)) },
-  by=.(lakeid, date, year, month)]
+  by=.(lakeid, date, year, doy)]
+
+## half-month bins, identical edges to Figure1_rate_of_change.R (Apr 1 - Nov 16)
+hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)
+g[, bi := findInterval(doy, hedges)]; g <- g[bi>=1 & bi<=length(hedges)-1]
+g[, `:=`(tbin=(hedges[bi]+hedges[bi+1])/2, twidth=hedges[bi+1]-hedges[bi])]
 
 g[, era := fifelse(year < ERA_BREAK, "baseline", "recent")]
 
-## per lake x depth bin x month x era: median DO and how many distinct years back it
-agg <- g[, .(med=median(val), n_yr=uniqueN(year)), by=.(lakeid, dbin, dstep, month, era)]
+## per lake x depth bin x half-month bin x era: median DO and how many distinct years back it
+agg <- g[, .(med=median(val), n_yr=uniqueN(year)), by=.(lakeid, dbin, dstep, tbin, twidth, era)]
 agg[, below := med < HYPOXIA_THRESHOLD]
 
-wide <- dcast(agg, lakeid+dbin+dstep+month ~ era, value.var=c("below","n_yr"))
+wide <- dcast(agg, lakeid+dbin+dstep+tbin+twidth ~ era, value.var=c("below","n_yr"))
 wide <- wide[!is.na(below_baseline) & !is.na(below_recent) &
              n_yr_baseline>=MIN_YEARS & n_yr_recent>=MIN_YEARS]
 
@@ -59,25 +64,29 @@ wide <- merge(wide, meta, by="lakeid")
 ord <- meta[order(region, -zmax), name]
 wide[, strip := factor(name, levels=ord)]
 
-mlabs <- c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov")
-wide[, mlab := factor(mlabs[month-3], levels=mlabs)]
-
 pal <- c("Remained < 3 mg/L (chronically hypoxic)"="#7f0000",
          "Became < 3 mg/L (newly hypoxic)"        ="#e66101",
          "Became ≥ 3 mg/L (newly oxygenated)" ="#1a9850",
          "Remained ≥ 3 mg/L (oxygenated)"     ="#2166ac")
 
-g_plot <- ggplot(wide, aes(x=mlab, y=dbin, fill=state)) +
-  geom_tile(aes(height=dstep), width=0.98) +
+## month boundaries + tick centres, same convention as Figure1_rate_of_change.R
+mbound <- c(91,121,152,182,213,244,274,305,320)
+xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
+                          labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
+                          minor_breaks=NULL, expand=c(0,0))
+
+g_plot <- ggplot(wide, aes(x=tbin, y=dbin, fill=state)) +
+  geom_tile(aes(width=twidth, height=dstep)) +
+  geom_vline(xintercept=mbound, color="white", linewidth=0.3, alpha=0.8) +
   scale_y_reverse(expand=c(0,0)) +
-  scale_x_discrete(expand=c(0,0)) +
+  xsc +
   scale_fill_manual(values=pal, name=NULL, drop=FALSE, na.translate=FALSE) +
   guides(fill=guide_legend(nrow=2, byrow=TRUE)) +
   facet_wrap(~strip, ncol=4, scales="free_y") +
   labs(x=NULL, y="Depth (m)") +
   theme_minimal(base_size=10.5) +
   theme(panel.grid=element_blank(), legend.position="bottom", legend.key.size=unit(0.4,"cm"),
-        legend.text=element_text(size=8), axis.text.x=element_text(size=7, angle=45, hjust=1),
+        legend.text=element_text(size=8), axis.text.x=element_text(size=7.5),
         strip.text=element_text(face="bold", size=9.5), panel.spacing=unit(0.6,"lines"))
 
 ggsave("figures/fig05_habitability.png", g_plot, width=9.5, height=7.5, dpi=500, bg="white")
@@ -92,10 +101,11 @@ write_captions <- function(new_caps) {
 }
 write_captions(data.table(
   file="figures/fig05_habitability.png",
-  title="Habitability by depth and month: dissolved oxygen, baseline vs. recent",
+  title="Habitability by depth and half-month period: dissolved oxygen, baseline vs. recent",
   caption=paste0(
     "For each lake, depth window (0.5 m bins for lakes under 10 m zmax, 1 m otherwise -- same ",
-    "rule as Figure1_rate_of_change.R), and month (April-November), median dissolved oxygen (mg/L) ",
+    "rule as Figure1_rate_of_change.R), and half-month period (April 1-November 15, same bin edges ",
+    "as Figure1_rate_of_change.R), median dissolved oxygen (mg/L) ",
     "is compared between a baseline era (pre-2016) and a recent era (2016-2025), against a 3 mg/L ",
     "cold/coolwater-fish habitat threshold. Dark red = remained below 3 mg/L in both eras ",
     "(chronically hypoxic); orange = crossed from at-or-above to below 3 mg/L (newly hypoxic, lost ",
