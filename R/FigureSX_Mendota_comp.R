@@ -1,24 +1,25 @@
 ## FigureSX_Mendota_comp.R: Lake Mendota dissolved oxygen (mg/L), 1906 vs 2016-2025.
 ##
 ## data/Juday/Mendota_1906.csv is a hand-digitized historical record (Juday era UW limnology
-## survey) -- repeated casts at four FIXED depths (0, 8, 10, 22 m) across the 1906 open-water
-## season, not full continuous profiles. To keep the two eras directly comparable, BOTH panels
-## here are built at those same four depths: the modern 2016-2025 panel interpolates every cast
-## to exactly 0/8/10/22 m rather than the fine continuous depth grid FigureSX_do_heatmaps.R uses
-## elsewhere -- showing modern data at a finer resolution than 1906 ever had would imply a
-## precision the historical panel can't match and make the comparison look apples-to-oranges.
+## survey) -- repeated casts at a small set of FIXED depths across the 1906 open-water season,
+## not full continuous profiles. To keep the two eras directly comparable, BOTH panels here are
+## built at those same fixed depths (read from the data, not hardcoded): the modern 2016-2025
+## panel interpolates every cast to exactly those depths rather than the fine continuous depth
+## grid FigureSX_do_heatmaps.R uses elsewhere -- showing modern data at a finer resolution than
+## 1906 ever had would imply a precision the historical panel can't match and make the comparison
+## look apples-to-oranges.
 ## Same half-month time bins and DO colour scale as FigureSX_do_heatmaps.R for visual consistency
 ## with the rest of the series.
 suppressMessages({library(data.table); library(ggplot2); library(scales)})
 
-TARGET_DEPTHS <- c(0, 8, 10, 22)
 MIN_YEARS <- 4   # modern cells need data from at least this many distinct years to be averaged
 
-## ---- 1906: four fixed depths, repeated casts across the season -------------------------------
+## ---- 1906: fixed depths, repeated casts across the season -------------------------------------
 d1906 <- fread("data/Juday/Mendota_1906.csv")[, .(doy=yday, depth=depth_m, val=do_mgl)]
 d1906[, era := "1906"]
+TARGET_DEPTHS <- sort(unique(d1906$depth))   # whatever depths the 1906 record actually has
 
-## ---- 2016-2025: interpolate each cast to the SAME four depths --------------------------------
+## ---- 2016-2025: interpolate each cast to the SAME fixed depths --------------------------------
 prof <- fread("data/profiles_clean.csv")[lakeid=="ME" & !is.na(o2)]
 prof[, `:=`(doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[year>=2016 & year<=2025]
@@ -81,7 +82,9 @@ g <- ggplot(agg, aes(tbin, depth_lab, fill=m)) +
         strip.text=element_text(face="bold", size=11), strip.placement="outside",
         axis.text=element_text(size=10), panel.spacing=unit(0.8,"lines"))
 
-ggsave("figures/figSX_mendota_1906_comp.png", g, width=7, height=4.2, dpi=500, bg="white")
+## height scales with how many depth rows there are (2 eras stacked, each with length(TARGET_DEPTHS) rows)
+fig_height <- 1.1 + 2 * 0.42 * length(TARGET_DEPTHS)
+ggsave("figures/figSX_mendota_1906_comp.png", g, width=7, height=fig_height, dpi=500, bg="white")
 cat("wrote figures/figSX_mendota_1906_comp.png\n")
 
 ## Title + caption off the PNG, into the shared captions.csv (same convention as the other fig*.R)
@@ -91,18 +94,20 @@ write_captions <- function(new_caps) {
   fwrite(rbind(old[!file %in% new_caps$file], new_caps), path)
   cat("wrote", path, "\n")
 }
+depth_list_str <- paste0(paste(head(TARGET_DEPTHS, -1), collapse=", "),
+                          if (length(TARGET_DEPTHS) > 1) " and " else "", tail(TARGET_DEPTHS, 1), " m")
 write_captions(data.table(
   file="figures/figSX_mendota_1906_comp.png",
   title="Lake Mendota dissolved oxygen, 1906 vs. 2016-2025",
   caption=paste0(
-    "Dissolved oxygen (mg/L) by half-month period at four fixed depths (0, 8, 10, 22 m), comparing ",
-    "a historical 1906 record (data/Juday/Mendota_1906.csv, hand-digitized from repeated casts across ",
-    "the open-water season) against the modern 2016-2025 record. Both panels are built at the same four ",
-    "depths for a direct comparison: 1906 only resolved these four fixed depths (not full continuous ",
-    "profiles), so the modern panel interpolates each cast to the same depths rather than the finer ",
-    "continuous grid used elsewhere in this project, to avoid implying a precision the historical ",
-    "record never had. A modern cell is blank if fewer than 4 distinct years contributed data; a 1906 ",
-    "cell is blank if no cast fell in that half-month window. Color scale shared with ",
-    "FigureSX_do_heatmaps.R."
+    "Dissolved oxygen (mg/L) by half-month period at ", length(TARGET_DEPTHS), " fixed depths (",
+    depth_list_str, "), comparing a historical 1906 record (data/Juday/Mendota_1906.csv, ",
+    "hand-digitized from repeated casts across the open-water season) against the modern 2016-2025 ",
+    "record. Both panels are built at the same fixed depths for a direct comparison: 1906 only ",
+    "resolved these depths (not full continuous profiles), so the modern panel interpolates each ",
+    "cast to the same depths rather than the finer continuous grid used elsewhere in this project, ",
+    "to avoid implying a precision the historical record never had. A modern cell is blank if fewer ",
+    "than ", MIN_YEARS, " distinct years contributed data; a 1906 cell is blank if no cast fell in ",
+    "that half-month window. Color scale shared with FigureSX_do_heatmaps.R."
   )
 ))
