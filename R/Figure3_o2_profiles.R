@@ -7,6 +7,10 @@
 ## raw shape of the four profiles; that annotation layer can come back once the 4-era shape is
 ## worth quantifying that way.
 ##
+## Trout Lake and Crystal Lake additionally get a single historical profile from Juday, C. and
+## Birge, E.A. (1932), Trans. Wis. Acad. Sci. Arts Lett. 27: 415-486 (data/Juday/Juday_1928.csv,
+## digitized by hand -- one cast per lake, 1928-08-21/25) -- see the conversion block below.
+##
 ## Also writes a second figure, fig03_o2_profiles_leveladjusted.png: the same decade-median
 ## approach for just Crystal/Sparkling/Big Muskellunge, but with each cast's depth adjusted for
 ## that day's lake level (EDI 30) before pooling -- see the block near the end of this script.
@@ -41,6 +45,41 @@ p[, era := factor(era, levels=lv)]
 do <- p[, .(o2sat=median(o2sat)), by=.(lakeid, era, depth=round(depth))]
 do <- merge(do, meta, by="lakeid")
 do <- do[depth<=zmax]
+
+## ---- 1928 historical profile (Trout Lake + Crystal Lake only) ----------------------------------
+## Juday, C. and Birge, E.A. (1932), Trans. Wis. Acad. Sci. Arts Lett. 27: 415-486 -- one cast per
+## lake, reported as DO (mg/L), not % sat, so it needs converting. % sat = 100 * DO_mgL / Cs(T),
+## where Cs is the freshwater solubility at 1 atm (Benson & Krause 1984 / APHA 4500-O) times a
+## barometric pressure correction for each lake's own elevation. Validated against the modern
+## record: back-solving o2sat/o2 for TR and CR in profiles_clean.csv against a sea-level-only
+## Benson-Krause gives a ratio of ~1.061 (i.e. NTL-LTER's own o2sat IS elevation-corrected), and
+## the standard barometric formula at these two lakes' actual elevations (data/lake_characteristics.csv,
+## EDI 434) reproduces that ~1.061 factor to within 0.1% -- so the same formula is used here for
+## the 1928 cast, rather than a plain sea-level assumption that would read the deep water as more
+## anoxic than it actually was.
+o2_solubility_mgL <- function(tempC) {                    # Benson & Krause (1984), freshwater, 1 atm
+  Ts <- tempC + 273.15
+  exp(-139.34411 + 1.575701e5/Ts - 6.642308e7/Ts^2 + 1.2438e10/Ts^3 - 8.621949e11/Ts^4)
+}
+pressure_ratio <- function(elev_m) (1 - 2.25577e-5*elev_m)^5.25588   # standard barometric formula
+
+elev <- fread("data/lake_characteristics.csv")[waterbody_name %in% c("Trout Lake","Crystal Lake"),
+                                                 .(waterbody_name, elevation_m)]
+elev_lookup <- c(TR=elev[waterbody_name=="Trout Lake", elevation_m],
+                  CR=elev[waterbody_name=="Crystal Lake", elevation_m])
+
+juday28 <- fread("data/Juday/Juday_1928.csv")
+juday28[, lakeid := fifelse(Lake=="Trout Lake", "TR", "CR")]
+juday28[, Cs := o2_solubility_mgL(Temp_C) * pressure_ratio(elev_lookup[lakeid])]
+juday28[, o2sat := 100 * DO_mgL / Cs]
+juday28 <- juday28[, .(lakeid, era="1928", depth=round(Depth), o2sat)]
+juday28 <- merge(juday28, meta, by="lakeid")
+juday28 <- juday28[depth<=zmax]
+
+lv <- c("1928", lv)   # extend the decade levels now that p's binning (which used the 4-item lv) is done
+do[, era := factor(as.character(era), levels=lv)]
+juday28[, era := factor(era, levels=lv)]
+do <- rbind(do, juday28)
 setorder(do, lakeid, era, depth)   # geom_path joins in row order; guard against merge re-sorting
 
 ## panel titles: lake name (bold) + region tag, same convention as Figure2_clarity_trends.R
@@ -50,7 +89,10 @@ striplabs <- setNames(meta$striplab, meta$lakeid)
 lake_ord <- meta[order(region,-zmax), lakeid]
 north <- lake_ord[1:7]; south <- lake_ord[8:11]
 
-pal <- setNames(c("#2166ac","#1a9850","#e08214","#b2182b"), lv)
+pal <- setNames(c("#000000","#2166ac","#1a9850","#e08214","#b2182b"), lv)
+## the 1928 line is a single historical cast, not a multi-year median like the others -- dashed,
+## so it reads as a categorically different kind of evidence rather than a 5th decade
+ltype <- setNames(c("22", rep("solid",4)), lv)
 xr <- range(do$o2sat, na.rm=TRUE)
 
 ## Built as individual panels + patchwork (not facet_wrap) so the gap left by the 7th northern
@@ -73,10 +115,11 @@ th <- theme_minimal(base_size=6.5) + theme(
 ## tick numbers, so each profile is readable without hunting for the nearest axis
 mkpanel <- function(lk, show_ytitle){
   d <- do[lakeid==lk]
-  ggplot(d, aes(o2sat, depth, color=era)) +
+  ggplot(d, aes(o2sat, depth, color=era, linetype=era)) +
     geom_path(linewidth=0.6) + geom_point(size=0.5) +
     expand_limits(x=xr) + scale_x_continuous(breaks=c(0,50,100)) + scale_y_reverse() +
     scale_color_manual(values=pal, name=NULL, drop=FALSE, limits=lv) +
+    scale_linetype_manual(values=ltype, name=NULL, drop=FALSE, limits=lv) +
     labs(title=striplabs[[lk]], x=NULL, y=if(show_ytitle) "Depth (m)" else NULL) +
     th
 }
@@ -122,7 +165,13 @@ caption <- paste0(
   "fresh on row 3. Crystal 2012-13 excluded (whole-lake mixing experiment).\n",
   "No anoxic-boundary or metalimnetic-O2-maximum annotations on this version -- just the raw profile ",
   "shape across the four decades, so a lake's trajectory (deepening/shoaling hypoxia, a strengthening ",
-  "or weakening subsurface O2 peak) can be read directly from how the four lines separate.")
+  "or weakening subsurface O2 peak) can be read directly from how the four lines separate.\n",
+  "Trout Lake and Crystal Lake additionally carry a single historical cast from 1928 (dashed black; ",
+  "Juday, C. and Birge, E.A. 1932, Trans. Wis. Acad. Sci. Arts Lett. 27: 415-486), converted from ",
+  "the original dissolved-oxygen (mg/L) units to % saturation using the Benson-Krause (1984) ",
+  "freshwater solubility equation with a standard barometric pressure correction for each lake's own ",
+  "elevation -- validated to reproduce the modern record's own o2/o2sat relationship for these two ",
+  "lakes to within 0.1%. A single cast, not a multi-year median like the other four lines.")
 write_captions(data.table(file="figures/fig03_o2_profiles.png",
   title="August dissolved-oxygen profiles by decade", caption=caption))
 
@@ -162,11 +211,14 @@ lab_by_lake <- setNames(sprintf("<span style='font-size:7pt;font-weight:bold'>%s
 ord3 <- lab_by_lake[meta[lakeid %in% c("CR","SP","BM")][order(-zmax), lakeid]]
 do3[, strip := factor(lab_by_lake[lakeid], levels=ord3)]
 
+## decades only here (no "1928" swatch) -- do3 never carries the 1928 cast, since it isn't part
+## of the lake-level-adjustment pipeline below
+lv_decades <- lv[lv != "1928"]
 g3 <- ggplot(do3, aes(o2sat, depth, color=era)) +
   geom_path(linewidth=0.6) + geom_point(size=0.5) +
   facet_wrap(~strip, ncol=3) +
   scale_x_continuous(breaks=c(0,50,100)) + scale_y_reverse() +
-  scale_color_manual(values=pal, name=NULL, drop=FALSE, limits=lv) +
+  scale_color_manual(values=pal[lv_decades], name=NULL, drop=FALSE, limits=lv_decades) +
   labs(x="Dissolved oxygen (% sat)", y="Depth below long-term median lake level (m)") +
   th + theme(legend.position="bottom", plot.title=element_blank(),
              strip.text=element_markdown(size=5.5, lineheight=1.2))

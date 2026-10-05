@@ -2,9 +2,9 @@
 # map.R
 # NTL-LTER Study Lakes — Southern (Yahara) & Northern (Vilas County) regions
 #
-# Produces a single, publication-quality graphic with two side-by-side maps:
-#   LEFT  — Southern region, Yahara lakes chain (Madison, WI)
-#   RIGHT — Northern region, Northwoods lakes (Vilas County, WI)
+# Produces a single, publication-quality graphic with two stacked maps:
+#   TOP    — Northern region, Northwoods lakes (Vilas County, WI)
+#   BOTTOM — Southern region, Yahara lakes chain (Madison, WI)
 #
 # Basemaps are real map tiles (so actual lake shapes render automatically —
 # no shapefiles required), with clean typography, a matching accent-color
@@ -22,7 +22,7 @@ required_pkgs <- c(
     "ggplot2",
     "ggrepel", # non-overlapping point labels
     "ggspatial", # scale bar + north arrow
-    "patchwork", # combine the two maps side by side
+    "patchwork", # stack the two maps
     "data.table", # captions.csv merge-write
     "maps" # world outline for the globe inset
 )
@@ -143,12 +143,9 @@ padded_bbox <- function(pts, pad_frac = 0.35, target_aspect = NULL) {
     bb["ymax"] <- bb["ymax"] + dy * pad_frac
 
     # The two regions have very different natural footprints (north is a wide
-    # east-west scatter, south is a tall north-south chain). Left alone, that
-    # forces two side-by-side panels of very different heights into one
-    # patchwork row -- the row height stretches to the taller one and the
-    # shorter panel centers with dead space above/below it. Pad the shorter
-    # dimension further so every panel shares the same target aspect ratio
-    # and fully fills its row.
+    # east-west scatter, south is a tall north-south chain). Pad the shorter
+    # dimension so both panels share the same target aspect ratio, giving a
+    # visually consistent pair of maps when stacked.
     if (!is.null(target_aspect)) {
         dx <- (bb["xmax"] - bb["xmin"])
         dy <- (bb["ymax"] - bb["ymin"])
@@ -169,8 +166,7 @@ padded_bbox <- function(pts, pad_frac = 0.35, target_aspect = NULL) {
     sf::st_as_sfc(bb, crs = 3857)
 }
 
-# height / width each panel should render at, so the south (tall) and north
-# (wide) point clusters end up filling the same row height side by side
+# height / width each panel should render at, so both maps share a consistent shape
 panel_target_aspect <- 0.85
 
 bbox_south <- padded_bbox(pts_south, pad_frac = 0.45, target_aspect = panel_target_aspect)
@@ -229,8 +225,8 @@ build_panel <- function(tiles, pts, polys = NULL, accent, title, subtitle, capti
             style = ggspatial::north_arrow_minimal(text_size = 8, line_width = 1.2),
             height = unit(0.9, "cm"), width = unit(0.9, "cm")
         ) +
-        # Titles are long, so wrap to 2 lines rather than letting bold text
-        # run past the ~2.9in panel width.
+        # Wraps to 2 lines if a longer title is ever swapped in, rather than
+        # letting bold text run past the panel width.
         labs(title = paste(strwrap(title, width = 32), collapse = "\n"), subtitle = subtitle, caption = caption) +
         coord_sf(expand = FALSE) +
         theme_void(base_family = "sans") +
@@ -314,27 +310,26 @@ p_south <- p_south + patchwork::inset_element(
     align_to = "panel"
 )
 
-# ---- 7. Combine side by side --------------------------------------------------
+# ---- 7. Combine stacked ---------------------------------------------------------
 
 # No overall title/explainer drawn here -- same convention as the other fig*.R
 # scripts (see Figure4_chl_profiles.R): that text goes to figures/captions.csv
 # only. The per-panel region names stay on the PNG since they're panel labels,
 # not the figure's headline/explainer.
-combined <- p_south | p_north
+combined <- p_north / p_south
 
 # ---- 8. Save ------------------------------------------------------------------
-# Height is sized to the actual content (panel titles + map area at
-# panel_target_aspect + caption), not an arbitrary tall canvas -- otherwise
-# ggsave pads the extra height as dead white space top/bottom of the figure.
-panel_width_in <- 6.5 / 2 - (8 + 6) / 72 # half the page minus left/right plot.margin
+# Height is sized to the actual content (two panel titles + two map areas at
+# panel_target_aspect), not an arbitrary tall canvas -- otherwise ggsave pads
+# the extra height as dead white space.
+output_width <- 3.5
+panel_width_in <- output_width - (8 + 6) / 72 # full width minus left/right plot.margin
 map_height_in <- panel_width_in * panel_target_aspect
-# Titles are now a single short line each ("Southern Lakes" / "Northern Lakes"
-# + one-line subtitle), so the title block needs much less headroom than the
-# 2-line estimate this budget once assumed -- was measured leaving ~0.28in of
-# true dead space above AND below the whole figure.
-output_height <- 0.42 + map_height_in + 0.05 # panel title (1 line)/subtitle + map + bottom margin
+# Titles are a single short line each ("Southern Lakes" / "Northern Lakes" +
+# one-line subtitle); each stacked panel repeats that title/subtitle budget.
+output_height <- 2 * (0.42 + map_height_in) + 0.05 # 2x (panel title/subtitle + map) + bottom margin
 
-ggsave(output_file, combined, width = 6.5, height = output_height, dpi = 500, bg = "white")
+ggsave(output_file, combined, width = output_width, height = output_height, dpi = 500, bg = "white")
 
 message("Saved: ", normalizePath(output_file))
 

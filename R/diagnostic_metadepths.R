@@ -4,7 +4,7 @@
 ## cast was classified as isothermal/mixed).
 suppressMessages({library(data.table); library(ggplot2); library(rLakeAnalyzer)})
 
-LAKE <- "CR"
+LAKE <- "MO"
 YEAR <- 2024
 
 prof <- fread("data/profiles_clean.csv")[lakeid==LAKE & year4==YEAR & !is.na(wtemp)]
@@ -35,7 +35,7 @@ g <- ggplot(prof, aes(x=wtemp, y=depth)) +
     subtitle="Dashed red = metalimnion top, dashed blue = metalimnion bottom (no lines = cast classified as mixed/isothermal)",
     x="Water temperature (°C)", y="Depth (m)") +
   theme_minimal(base_size=10) +
-  theme(strip.text=element_text(face="bold"), plot.title=element_text(face="bold", size=12))
+  theme(strip.text=element_text(face="bold"), plot.title=element_text(face="bold", size=12)); g
 
 outfile <- sprintf("figures/diagnostics/diag_%s_%d_metadepths.png", LAKE, YEAR)
 dir.create("figures/diagnostics", showWarnings=FALSE, recursive=TRUE)
