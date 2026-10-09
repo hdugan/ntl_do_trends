@@ -76,7 +76,7 @@ smod <- interp_casts("o2sat_me", DEPTHS$do)
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)
 mbound <- c(91,121,152,182,213,244,274,305,320)
 xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
-                          labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov 1–15"),
+                          labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
                           minor_breaks=NULL, expand=c(0,0), limits=c(91,320))
 bin_season <- function(d) {
   d <- copy(d)
@@ -102,41 +102,39 @@ pal_do <- scale_fill_gradientn(colours=do_cols, values=rescale(c(0,1,2,4,6,9,14)
 pal_sat <- scale_fill_gradientn(colours=do_cols, values=rescale(c(0,10,20,40,70,95,140)), name="DO (% sat)",
                                 limits=c(0,140), oob=squish, na.value="grey90")
 
-## ---- difference palettes: Figure1_rate_of_change.R's colours at Figure 1's values, extended ----
-## Figure 1's 9-colour scales end at +/-1 (temp), +/-1.5 (mg/L) and +/-15 (% sat). Those same
-## colours sit at the same values here, so a cell reads the same in both figures; the 1906 ->
-## 2016-2025 change is much larger than one decade's rate, so each scale gets one darker colour
-## per end (the 11-class RdBu / BrBG end-members) out to ext, squished beyond.
-fig1_T    <- c("#2166ac","#4393c3","#92c5de","#d1e5f0","#f7f7f7","#fddbc7","#f4a582","#d6604d","#b2182b")
-fig1_brbg <- c("#8c510a","#bf812d","#dfc27d","#f6e8c3","#f5f5f5","#c7eae5","#80cdc1","#35978f","#01665e")
-ext_pal <- function(cols, lo_end, hi_end, fig1_lim, ext, name) {
-  v <- c(-ext, seq(-fig1_lim, fig1_lim, length.out=9), ext)
-  scale_fill_gradientn(colours=c(lo_end, cols, hi_end), values=rescale(v), limits=c(-ext, ext),
-                       breaks=c(-ext, -fig1_lim, fig1_lim, ext), oob=squish, name=name, na.value="grey90",
-                       ## Figure 1's range is the middle band of the bar -- taller bar so its labels don't collide
-                       guide=guide_colorbar(barheight=unit(2.8, "cm")))
+## ---- difference palettes: only cells beyond a threshold are coloured, everything else very light grey ----
+## Thresholds are Figure 1's +/- values: 1 deg C, 1.5 mg/L, 15 % sat. Colours are the darkest end of
+## the extended Figure 1 scales (temp red/blue, DO green/brown).
+THRESH <- c(temp=1, mgL=1.5, sat=15)
+thresh_pal <- function(hi, lo, lab_hi, lab_lo, name) {
+  scale_fill_manual(values=c(hi=hi, lo=lo, none="#efefef"), breaks=c("hi","lo"),
+                    labels=c(lab_hi, lab_lo), name=name, drop=FALSE)
 }
-pal_tdiff   <- ext_pal(fig1_T,    "#053061", "#67001f", 1,   4,  "Δ Temp (°C)")
-pal_odiff   <- ext_pal(fig1_brbg, "#543005", "#003c30", 1.5, 4,  "Δ DO (mg/L)")
-pal_satdiff <- ext_pal(fig1_brbg, "#543005", "#003c30", 15,  45, "Δ DO (% sat)")
+pal_tdiff   <- thresh_pal("#b2182b", "#2166ac", "> +1 \u00b0C",   "< \u22121 \u00b0C",   "\u0394 Temp")
+pal_odiff   <- thresh_pal("#01665e", "#8c510a", "> +1.5 mg/L", "< \u22121.5 mg/L", "\u0394 DO")
+pal_satdiff <- thresh_pal("#01665e", "#8c510a", "> +15 % sat", "< \u221215 % sat", "\u0394 DO")
+classify <- function(a, thr) {
+  a <- copy(a); a[, m := factor(fifelse(m > thr, "hi", fifelse(m < -thr, "lo", "none")),
+                                levels=c("hi","lo","none"))]; a
+}
 
-panel <- function(a, depths, pal, title, show_y) {
+panel <- function(a, depths, pal, title, show_y, tile_col="white") {
   a <- copy(a)
   a[, depth_lab := factor(sprintf("%g m", depth), levels=sprintf("%g m", rev(depths)))]
   ggplot(a, aes(tbin, depth_lab, fill=m)) +
-    geom_tile(aes(width=twidth), height=0.92, color="white", linewidth=0.3) +
+    geom_tile(aes(width=twidth), height=0.92, color=tile_col, linewidth=0.12) +
     ## month starts drawn dark + dashed over the tiles, so they read differently from the
     ## white mid-month tile seams; labels sit mid-month between them
-    geom_vline(xintercept=mbound, color="grey15", linewidth=0.45, linetype="22") +
+    geom_vline(xintercept=mbound, color="grey15", linewidth=0.2, linetype="22") +
     scale_y_discrete(drop=FALSE) + xsc + pal +
     labs(title=title, x=NULL, y=if (show_y) "Depth" else NULL) +
-    theme_minimal(base_size=11) +
-    theme(panel.grid=element_blank(), plot.title=element_text(face="bold", size=11.5),
-          axis.text=element_text(size=9),
+    theme_minimal(base_size=6) +
+    theme(panel.grid=element_blank(), plot.title=element_text(face="bold", size=6.5),
+          axis.text=element_text(size=5),
           ## compact colorbars so the four stacked legends fit beside the panels
-          legend.key.height=unit(0.38,"cm"), legend.key.width=unit(0.35,"cm"),
-          legend.title=element_text(size=9), legend.text=element_text(size=8),
-          legend.spacing.y=unit(0.2,"cm"))
+          legend.key.height=unit(0.22,"cm"), legend.key.width=unit(0.2,"cm"),
+          legend.title=element_text(size=5.5), legend.text=element_text(size=5),
+          legend.spacing.y=unit(0.1,"cm"), plot.margin=margin(2,2,2,2))
 }
 
 ## difference = 2016-2025 minus 1906, only in cells where both eras have a value
@@ -145,12 +143,12 @@ diff_agg <- function(a_old, a_new) {
   d[, .(tbin, twidth, depth, m = m_new - m_old)][!is.na(m)]
 }
 
-a_t06 <- agg_1906(t1906); a_tmd <- agg_modern(tmod); a_tdf <- diff_agg(a_t06, a_tmd)
+a_t06 <- agg_1906(t1906); a_tmd <- agg_modern(tmod); a_tdf <- diff_agg(a_t06, a_tmd)  # continuous difference, classified at plot time
 DO <- list(
-  mgL = list(a06=agg_1906(o1906), amd=agg_modern(omod), pal=pal_do,  dpal=pal_odiff,
-             lab="Dissolved oxygen (mg/L)", file="figures/figSX_mendota_1906_comp.png"),
-  sat = list(a06=agg_1906(s1906), amd=agg_modern(smod), pal=pal_sat, dpal=pal_satdiff,
-             lab="Dissolved oxygen (% sat)", file="figures/figSX_mendota_1906_comp_sat.png"))
+  mgL = list(a06=agg_1906(o1906), amd=agg_modern(omod), pal=pal_do,  dpal=pal_odiff, thr=THRESH[["mgL"]],
+             lab="DO (mg/L)", file="figures/figSX_mendota_1906_comp.png"),
+  sat = list(a06=agg_1906(s1906), amd=agg_modern(smod), pal=pal_sat, dpal=pal_satdiff, thr=THRESH[["sat"]],
+             lab="DO (% sat)", file="figures/figSX_mendota_1906_comp_sat.png"))
 cat(sprintf("diff ranges -- temp %.1f to %.1f; mg/L %.1f to %.1f; %%sat %.0f to %.0f\n",
             min(a_tdf$m), max(a_tdf$m),
             min(diff_agg(DO$mgL$a06, DO$mgL$amd)$m), max(diff_agg(DO$mgL$a06, DO$mgL$amd)$m),
@@ -159,17 +157,20 @@ cat(sprintf("diff ranges -- temp %.1f to %.1f; mg/L %.1f to %.1f; %%sat %.0f to 
 ## rows = variable, columns = 1906 | 2016-2025 | difference
 p_t06 <- panel(a_t06, DEPTHS$temp, pal_temp,  "Temperature — 1906", TRUE)
 p_tmd <- panel(a_tmd, DEPTHS$temp, pal_temp,  "Temperature — 2016–2025", FALSE)
-p_tdf <- panel(a_tdf, DEPTHS$temp, pal_tdiff, "Temperature — difference", FALSE)
-fig_height <- 1.6 + 0.3 * sum(lengths(DEPTHS))
+p_tdf <- panel(classify(a_tdf, THRESH[["temp"]]), DEPTHS$temp, pal_tdiff, "Temperature — difference", FALSE, tile_col="white")
+fig_height <- 0.6 + 0.135 * sum(lengths(DEPTHS))   # 6.5 in wide, 500 dpi (journal single-page width)
 for (v in DO) {
   p_o06 <- panel(v$a06, DEPTHS$do, v$pal,  paste(v$lab, "— 1906"), TRUE)
   p_omd <- panel(v$amd, DEPTHS$do, v$pal,  paste(v$lab, "— 2016–2025"), FALSE)
-  p_odf <- panel(diff_agg(v$a06, v$amd), DEPTHS$do, v$dpal, paste(v$lab, "— difference"), FALSE)
-  g <- (p_t06 | p_tmd | p_tdf) / (p_o06 | p_omd | p_odf) +
-    plot_layout(guides="collect", heights=c(length(DEPTHS$temp), length(DEPTHS$do))) +
-    plot_annotation(title="Lake Mendota: 1906 vs. 2016–2025",
-                    theme=theme(plot.title=element_text(face="bold", size=14)))
-  ggsave(v$file, g, width=16, height=fig_height, dpi=500, bg="white")
+  p_odf <- panel(classify(diff_agg(v$a06, v$amd), v$thr), DEPTHS$do, v$dpal, paste(v$lab, "— difference"), FALSE, tile_col="white")
+  ## each row collects its OWN legends (the absolute scale + its difference key) at its right
+  ## edge, so the keys sit beside the panels they describe instead of in one detached stack
+  row_t <- (p_t06 | p_tmd | p_tdf) + plot_layout(guides="collect")
+  row_o <- (p_o06 | p_omd | p_odf) + plot_layout(guides="collect")
+  g <- (row_t / row_o) + plot_layout(heights=c(length(DEPTHS$temp), length(DEPTHS$do))) +
+    plot_annotation(title="Lake Mendota: 1906 vs. 2016\u20132025",
+                    theme=theme(plot.title=element_text(face="bold", size=8)))
+  ggsave(v$file, g, width=6.5, height=fig_height, dpi=500, bg="white")
   cat("wrote", v$file, "\n")
 }
 
@@ -183,10 +184,10 @@ write_captions <- function(new_caps) {
 dlist <- function(x) paste0(paste(head(x, -1), collapse=", "), " and ", tail(x, 1), " m")
 base_cap <- paste0(
   "by half-month period: 1906 (left), 2016-2025 (middle), and the difference 2016-2025 minus 1906 ",
-  "(right; only where both eras have a value). Difference colour scales use Figure 1's colours at ",
-  "Figure 1's values (temperature +/-1, DO +/-1.5 mg/L or +/-15 % sat), extended with one darker colour ",
-  "per end to +/-4 deg C, +/-4 mg/L and +/-45 % sat; note Figure 1 is a rate per decade, this is the total ",
-  "change across ~110 years. Dashed vertical lines mark the start of each month; labels sit mid-month. ",
+  "(right; only where both eras have a value, and coloured only where the change exceeds a threshold: ",
+  "temperature +/-1 deg C, DO +/-1.5 mg/L or +/-15 % sat -- Figure 1's values -- red/blue for warmer/cooler, ",
+  "green/brown for more/less oxygen; all other cells very light grey). Note Figure 1 is a rate per decade, this is the total ",
+  "change across ~110 years. Dashed vertical lines mark the start of each month; labels sit mid-month (the Nov label covers Nov 1-15 only). ",
   "The 1906 values are digitized from Birge and Juday (1911), Wisconsin Geological and Natural History ",
   "Survey Bulletin XXII, Plates I and II -- repeated casts at fixed depths (temperature: ", dlist(DEPTHS$temp),
   "; oxygen: ", dlist(DEPTHS$do), "). Plate II reports oxygen in cc/L, converted to mg/L (x 1.429). Each ",
