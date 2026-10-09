@@ -1,0 +1,12 @@
+lagoslakeid,wbic,nhdid,waterbody_name,waterbody_lat_decdeg,waterbody_lon_decdeg,avg_depth_m,max_depth_m,mixing_type,waterbody_area_ha,watershed_area_ha,network_watershed_area_ha,elevation_m,shoreline_length_km,trophic_state,drainage_type,alkalinity_ueql,total_p_ugl,total_n_ugl,doc_mgl,nlcd2016_developed_pct,nlcd2016_forest_pct,nlcd2016_agriculture_pct,nlcd2016_wetland_pct
+4664,2331600,69886228,Trout Lake,46.029267,-89.665017,14.6,35.7,dimictic,1583,3650.5,6884.2,491.7,25.7,oligotrophic,drainage,907,10.3,271,2.5,5.3,55.7,0.1,33.9
+4722,1842400,69886510,Crystal Lake,46.00275,-89.612233,11.4,20.4,dimictic,37.5,478,478,502,2.3,oligotrophic,seepage,42,12.8,229,2,9.3,76.4,0,13.9
+5248,1835300,69886284,Big Muskellunge Lake,46.021067,-89.611783,7.5,21.3,dimictic,375.7,512.9,512.9,500.2,16.1,oligotrophic,seepage,592,12,390,3.2,5,70.2,0,16.5
+906,1881900,69886444,Sparkling Lake,46.007733,-89.701183,10.9,20,dimictic,63.7,163.5,163.5,494.7,4.3,oligotrophic,seepage,688,12.4,307,3.3,7.4,59.1,0,30.3
+4625,2332400,69886156,Allequash Lake,46.038,-89.621,2.9,8,dimictic,164.2,1375.9,2293.1,494.1,9.5,mesotrophic,drainage,884,24,389,4.4,2.4,61.3,0,30.5
+120948,NA,69886158,Trout Bog,46.04125,-89.686283,5.6,7.9,dimictic,1,24.9,24.9,495.1,0.369,dystrophic,seepage,32,51.3,1140,23.8,0,78.3,0,20.3
+NA,NA,69886472,Crystal Bog,46.007583,-89.606183,1.7,2.5,dimictic,0.6,NA,NA,501,0.285,dystrophic,seepage,23,22.1,698,11.1,NA,NA,NA,NA
+5371,805400,143249470,Lake Mendota,43.09885,-89.40545,12.8,25.3,dimictic,3961.2,24121.2,48818.2,258,33.8,eutrophic,drainage,3781,107,1500,5.8,27.1,5.6,61.7,4.5
+4559,804600,143249640,Lake Monona,43.06337,-89.36086,8.2,22.5,dimictic,1372.5,7617.9,61750.1,257,20.9,eutrophic,drainage,3583,88,1010,7.1,76,3,14.8,5.5
+2746,985100,141288680,Fish Lake,43.28733,-89.65173,6.6,18.9,dimictic,80.4,204.8,207.9,260.2,4.3,mesotrophic,seepage,3179,24,1074,8.6,3.5,38.3,46.1,0.1
+827,805000,143249705,Lake Wingra,43.05258,-89.42499,2.7,4,polymictic,138.5,1144.4,1144.4,258,5.9,eutrophic,drainage,3823,49,832,6.6,74.8,11.7,2.7,10.6

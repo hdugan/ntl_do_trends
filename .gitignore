@@ -1,7 +1,6 @@
-# Raw data pulled from EDI (regenerate with R/00_pull_data.R)
-data/*
-# ...except the hand-digitized historical (Juday/Birge) data, which cannot be regenerated
-!data/Juday/
+# data/ is tracked in full (EDI pulls, cleaned profiles, GIS, hand-digitized Juday/Birge data)
+# macOS finder metadata
+.DS_Store
 
 # History files
 .Rhistory
