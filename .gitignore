@@ -1,5 +1,7 @@
 # Raw data pulled from EDI (regenerate with R/00_pull_data.R)
-data/
+data/*
+# ...except the hand-digitized historical (Juday/Birge) data, which cannot be regenerated
+!data/Juday/
 
 # History files
 .Rhistory
