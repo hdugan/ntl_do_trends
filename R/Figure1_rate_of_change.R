@@ -1,4 +1,4 @@
-## Fig 12: RATE of change across depth x season, all 11 NTL lakes. Data: EDI 29.
+## Fig 12: RATE of change across depth x season, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
 ## Companion to fig09, but instead of differencing two eras this fits a trend through the WHOLE
 ## record: per cell, a Theil-Sen slope (per decade) with a Mann-Kendall significance test.
 ## Why this exists: an era split (fig09) discards the time ordering -- a step change and a steady
@@ -13,6 +13,8 @@ meta <- data.table(
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+## Fish Lake (FI) and Lake Wingra (WI) are dropped from every figure.
+meta <- meta[!lakeid %in% c("FI","WI")]
 
 prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
@@ -182,8 +184,8 @@ make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
   NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
   ST <- block("Southern","wtemp", pal_T, FALSE, sprintf("Southern Ag/Urban Lakes (%d–%d)", syr$lo, syr$hi), "Trend in temperature")
   SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
-  left  <- (NT / ST) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
-  right <- (NO / SO) + plot_layout(heights=c(7,4), guides="collect") & theme(legend.position="bottom")
+  left  <- (NT / ST) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
+  right <- (NO / SO) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
   design <- (left | right) + plot_layout(guides="keep")
   final <- wrap_elements(design)
   ggsave(outfile, final, width=6.5, height=8, dpi=500, bg="white"); cat("wrote", outfile, "\n")

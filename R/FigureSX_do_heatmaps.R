@@ -10,6 +10,8 @@ meta <- data.table(
   trophic=c("oligotrophic","oligotrophic","oligotrophic","oligotrophic","mesotrophic","dystrophic","dystrophic",
             "eutrophic","eutrophic","mesotrophic","eutrophic"),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+## Fish Lake (FI) and Lake Wingra (WI) are dropped from every figure.
+meta <- meta[!lakeid %in% c("FI","WI")]
 tro <- c(oligotrophic="oligotrophic",mesotrophic="mesotrophic",dystrophic="dystrophic (bog)",eutrophic="eutrophic")
 
 prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
@@ -93,5 +95,5 @@ sb <- c(1995,2005,2015,2025);      sl <- c("1996–05","2006–15","2016–25")
 
 build("o2",    "Northern", nb, nl, "Northern NTL lakes: dissolved oxygen (mg/L) by depth & season", subN(MIN_YEARS), pal_do,  "figures/figSX_northern_do.png",  15, 13)
 build("o2sat", "Northern", nb, nl, "Northern NTL lakes: oxygen saturation (%) by depth & season",    subN(MIN_YEARS), pal_sat, "figures/figSX_northern_sat.png", 15, 13)
-build("o2",    "Southern", sb, sl, "Southern NTL lakes: dissolved oxygen (mg/L) by depth & season",   subS(MIN_YEARS), pal_do,  "figures/figSX_southern_do.png",  12, 8.5)
-build("o2sat", "Southern", sb, sl, "Southern NTL lakes: oxygen saturation (%) by depth & season",     subS(MIN_YEARS), pal_sat, "figures/figSX_southern_sat.png", 12, 8.5)
+build("o2",    "Southern", sb, sl, "Southern NTL lakes: dissolved oxygen (mg/L) by depth & season",   subS(MIN_YEARS), pal_do,  "figures/figSX_southern_do.png",  12, 5.2)
+build("o2sat", "Southern", sb, sl, "Southern NTL lakes: oxygen saturation (%) by depth & season",     subS(MIN_YEARS), pal_sat, "figures/figSX_southern_sat.png", 12, 5.2)

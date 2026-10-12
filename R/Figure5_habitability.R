@@ -1,4 +1,4 @@
-## Fig 5: habitability status by depth window x half-month period, all 11 NTL lakes. Data: EDI 29.
+## Fig 5: habitability status by depth window x half-month period, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
 ## For each lake x depth bin x half-month period (same Apr1-Nov16 edges as Figure1_rate_of_change.R),
 ## compares median DO (mg/L) in two eras -- baseline (pre-2016) vs recent (2016-2025) -- against the
 ## 3 mg/L cold/coolwater-fish habitat threshold, and classifies the transition into one of four states:
@@ -16,6 +16,8 @@ meta <- data.table(
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+## Fish Lake (FI) and Lake Wingra (WI) are dropped from every figure.
+meta <- meta[!lakeid %in% c("FI","WI")]
 zmax_lookup <- setNames(meta$zmax, meta$lakeid)
 
 HYPOXIA_THRESHOLD <- 3   # mg/L, cold/coolwater-fish habitat cutoff
@@ -82,7 +84,7 @@ g_plot <- ggplot(wide, aes(x=tbin, y=dbin, fill=state)) +
   xsc +
   scale_fill_manual(values=pal, name=NULL, drop=FALSE, na.translate=FALSE) +
   guides(fill=guide_legend(nrow=2, byrow=TRUE)) +
-  facet_wrap(~strip, ncol=4, scales="free_y") +
+  facet_wrap(~strip, ncol=3, scales="free_y") +
   labs(x=NULL, y="Depth (m)") +
   theme_minimal(base_size=10.5) +
   theme(panel.grid=element_blank(), legend.position="bottom", legend.key.size=unit(0.4,"cm"),

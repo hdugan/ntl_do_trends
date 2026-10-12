@@ -1,7 +1,7 @@
-## Fig 2: standardized water-clarity trends, all 11 NTL lakes. Data: EDI 1 (DOC), 29 (light/PAR),
+## Fig 2: standardized water-clarity trends, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 1 (DOC), 29 (light/PAR),
 ## 31 (Secchi).
 ## THREE independently-measured views of clarity for the 7 NORTHERN lakes (they cross-validate
-## each other), but only TWO for the 4 SOUTHERN lakes:
+## each other), but only TWO for the 2 SOUTHERN lakes:
 ##   Kd        -- light-extinction coefficient (m^-1) from PAR profiles;  higher = darker  [north only]
 ##   DOC       -- dissolved organic carbon (mg/L), the lab-measured driver;  higher = darker  [all 11]
 ##   Secchi    -- Secchi disk depth (m), read by eye;                        lower  = darker  [all 11]
@@ -19,7 +19,7 @@
 ##
 ## Secchi is recorded twice per visit -- secview (with viewing scope) and secnview (no scope,
 ## reads ~0.5 m shallower, r=0.97). secview is essentially northern-only (southern lakes have 0-1
-## readings each), so PRIMARY is secview for the 7 northern lakes and secnview for the 4 southern
+## readings each), so PRIMARY is secview for the 7 northern lakes and secnview for the 2 southern
 ## lakes.
 suppressMessages({library(data.table); library(ggplot2); library(ggh4x); library(ggtext)})
 
@@ -39,6 +39,8 @@ meta <- data.table(
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+## Fish Lake (FI) and Lake Wingra (WI) are dropped from every figure.
+meta <- meta[!lakeid %in% c("FI","WI")]
 NORTH <- meta[region=="Northern", lakeid]
 
 ## Theil-Sen slope + median intercept + Mann-Kendall p. Returns the intercept too so the drawn
@@ -68,17 +70,25 @@ kd <- p[, { v <- NA_real_
   list(v=v) }, by=.(lakeid, date, year)]           # one Kd per cast
 kdyr <- robz(annual(kd[is.finite(v) & v>0]))
 
-## ---------------- metric 2: DOC (mg/L), surface (0 m exactly), all 11 lakes ------------------------
+## ---------------- metric 2: DOC (mg/L), surface (0 m exactly), all 9 lakes ------------------------
 ## depth==0, NOT depth<=2: discrete sampled depths differ by lake, so <=2m is not like-for-like
 ## (see fig08/fig12). Same change applied there.
 doc <- fread("data/chem_north.csv")[lakeid %in% meta$lakeid & doc>0 & doc<80 & depth==0 &
                                     (is.na(flagdoc) | flagdoc=="") &
                                     !(lakeid=="CR" & year4 %in% c(2012,2013))]
 doc[, `:=`(year=year4, date=as.Date(sampledate), doy=yday(as.Date(sampledate)))]
+## BAD DATA: surface DOC from 2023-06-02 through 2023-06-15 is not credible (the southern lakes read
+## 46-60 mg/L against ~4-7 mg/L on every other 2023 date). Those rows already carry quality flags
+## (E/K/U) and are caught by the flagdoc filter above, but the window is also dropped explicitly so
+## the exclusion doesn't depend on the flags.
+BAD_DOC <- as.Date(c("2023-06-02", "2023-06-15"))
+n_bad_doc <- doc[date>=BAD_DOC[1] & date<=BAD_DOC[2], .N]
+doc <- doc[!(date>=BAD_DOC[1] & date<=BAD_DOC[2])]
+cat("DOC rows dropped as bad data (2023-06-02 to 2023-06-15), beyond those already flagged:", n_bad_doc, "\n")
 docdate <- doc[doy>=SEASON[1] & doy<=SEASON[2], .(v=median(doc)), by=.(lakeid,date,year)]
 docyr   <- robz(annual(docdate))
 
-## ---------------- metric 3: Secchi (m), all 11 lakes -------------------------------------------------
+## ---------------- metric 3: Secchi (m), all 9 lakes -------------------------------------------------
 sec <- fread("data/secchi.csv")[lakeid %in% meta$lakeid &
                                 !(lakeid=="CR" & year4 %in% c(2012,2013))]
 sec[, `:=`(year=year4, date=as.Date(sampledate), doy=yday(as.Date(sampledate)))]
@@ -168,9 +178,9 @@ caption <- paste0(
   "June-September, standardized trends: each lake's own annual series is centred on its own MEDIAN and scaled by its own MAD (median absolute deviation, ",
   "robust to outliers), then oriented so POSITIVE = DARKER for every metric (Secchi is sign-flipped since low Secchi = dark water) -- this puts metrics in ",
   "different raw units, and lakes with only 2 of the 3 available, on one shared, fixed axis. Northern lakes (7): Kd (light extinction), DOC, and Secchi ",
-  "(secview). Southern lakes (4): DOC and Secchi (secnview) only -- southern PAR profiles only start in 2019 (too short to trend).\n",
+  "(secview). Southern lakes (2): DOC and Secchi (secnview) only -- southern PAR profiles only start in 2019 (too short to trend).\n",
   "Each point is the annual MEDIAN across sampling dates; lake-years with <3 sampling dates are dropped.\n",
   "Solid trend = significant (Theil-Sen slope / Mann-Kendall p<0.05); dashed = not significant. Labels: slope in MAD/decade (*<0.05 **<0.01 ***<0.001). ",
-  "Crystal 2012-13 excluded (whole-lake mixing experiment). Full trend table with p-values: figures/fig02_trends_table.csv.")
+  "Crystal 2012-13 excluded (whole-lake mixing experiment). Surface DOC from 2 to 15 June 2023 is excluded as bad data (implausibly high values in the southern lakes). Full trend table with p-values: figures/fig02_trends_table.csv.")
 write_captions(data.table(file="figures/fig02_clarity_trends.png",
   title="Standardized water-clarity trends across Wisconsin's lakes", caption=caption))

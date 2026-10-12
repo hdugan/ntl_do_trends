@@ -20,11 +20,7 @@ TR,Trout,Northern,Secchi,-0.31,2e-04,TRUE,45
 TB,Trout Bog,Northern,DOC,0.582,0,TRUE,37
 TB,Trout Bog,Northern,Kd,0.55,0,TRUE,43
 TB,Trout Bog,Northern,Secchi,0.371,3e-04,TRUE,45
-FI,Fish,Southern,DOC,-0.752,0.0029,TRUE,23
-FI,Fish,Southern,Secchi,0.783,0.0034,TRUE,28
 ME,Mendota,Southern,DOC,-0.802,0,TRUE,27
 ME,Mendota,Southern,Secchi,0.562,9e-04,TRUE,31
 MO,Monona,Southern,DOC,-0.858,0,TRUE,25
 MO,Monona,Southern,Secchi,0.327,0.1318,FALSE,30
-WI,Wingra,Southern,DOC,-0.72,1e-04,TRUE,23
-WI,Wingra,Southern,Secchi,-0.828,2e-04,TRUE,29

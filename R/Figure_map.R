@@ -43,10 +43,7 @@ library(data.table)
 
 # ---- 1. Options you may want to tweak ---------------------------------------
 
-# Fish Lake is an official NTL "southern" study lake but sits ~30 miles from
-# the other three (Mendota/Monona/Wingra), which widens the southern map a
-# lot. Set to FALSE to keep the southern panel tight on the Yahara chain.
-include_fish_lake <- TRUE
+# (Fish Lake and Lake Wingra are excluded -- see southern_lakes below.)
 
 # Basemap style. "Esri.WorldGrayCanvas" = clean/light, no API key required.
 # NOTE: as of 2024 CartoDB's free tile endpoints (CartoDB.Positron etc.) require
@@ -70,12 +67,13 @@ southern_lakes <- data.frame(
     lat = c(43.09885, 43.06337, 43.05258, 43.28733),
     lon = c(-89.40545, -89.36086, -89.42499, -89.65173),
     nudge_x = 0, # metres, applied to the ggrepel label starting position
+    nudge_y = 0,
     stringsAsFactors = FALSE
 )
 
-if (!include_fish_lake) {
-    southern_lakes <- subset(southern_lakes, name != "Fish Lake")
-}
+# Fish Lake and Lake Wingra are dropped from every figure in this project, so the southern
+# panel is just Mendota and Monona.
+southern_lakes <- subset(southern_lakes, !name %in% c("Fish Lake", "Lake Wingra"))
 
 northern_lakes <- data.frame(
     name = c(
@@ -86,7 +84,8 @@ northern_lakes <- data.frame(
     lon = c(-89.620617, -89.611783, -89.606183, -89.612233, -89.701183, -89.686283, -89.665017),
     # Big Muskellunge Lake's label otherwise gets placed to the west, straight over
     # the Trout Lake point -- nudge its ggrepel starting position east to clear it.
-    nudge_x = c(0, 900, 0, 0, 0, 0, 0),
+    nudge_x = c(0, 1500, 0, 0, 0, 0, 0),
+    nudge_y = c(500, -200, 0, 0, 0, 0, 0), # keep Big Muskellunge's label off the Allequash point
     stringsAsFactors = FALSE
 )
 
@@ -169,7 +168,7 @@ padded_bbox <- function(pts, pad_frac = 0.35, target_aspect = NULL) {
 # height / width each panel should render at, so both maps share a consistent shape
 panel_target_aspect <- 0.85
 
-bbox_south <- padded_bbox(pts_south, pad_frac = 0.45, target_aspect = panel_target_aspect)
+bbox_south <- padded_bbox(pts_south, pad_frac = 1.6, target_aspect = panel_target_aspect)
 bbox_north <- padded_bbox(pts_north, pad_frac = 0.55, target_aspect = panel_target_aspect)
 
 # The padding above is based on the sampling-point bbox, but Trout Lake's actual
@@ -178,14 +177,37 @@ bbox_north <- padded_bbox(pts_north, pad_frac = 0.55, target_aspect = panel_targ
 # basemap left over to the south. Shift the whole window north to rebalance.
 bbox_north <- sf::st_set_crs(bbox_north + c(0, 1400), 3857)
 
+# Zoom out for the south and slide the window NW so Mendota's shoreline clears the frame.
+bb_s <- sf::st_bbox(bbox_south)
+bbox_south <- sf::st_set_crs(bbox_south + unname(c(-0.07 * (bb_s["xmax"] - bb_s["xmin"]), 0.05 * (bb_s["ymax"] - bb_s["ymin"]))), 3857)
+
+# Give the north panel the same ground scale (km per cm) as the south panel: equal ground width,
+# correcting Web Mercator's latitude stretch, keeping the north window's centre and aspect.
+match_ground_scale <- function(b_ref, lat_ref, b, lat) {
+    r <- sf::st_bbox(b_ref); n <- sf::st_bbox(b)
+    w <- unname(r["xmax"] - r["xmin"]) * cos(lat_ref * pi / 180) / cos(lat * pi / 180)
+    h <- w * unname(n["ymax"] - n["ymin"]) / unname(n["xmax"] - n["xmin"])
+    cx <- unname(n["xmin"] + n["xmax"]) / 2; cy <- unname(n["ymin"] + n["ymax"]) / 2
+    sf::st_as_sfc(sf::st_bbox(c(xmin = cx - w / 2, ymin = cy - h / 2, xmax = cx + w / 2, ymax = cy + h / 2),
+                              crs = sf::st_crs(3857)))
+}
+bbox_north <- match_ground_scale(bbox_south, mean(southern_lakes$lat), bbox_north, mean(northern_lakes$lat))
+
+# Tiles are fetched for a window 30% larger than the view, so no white shows at the panel edges.
+expand_bbox <- function(b, f = 0.3) {
+    bb <- sf::st_bbox(b); dx <- unname(bb["xmax"] - bb["xmin"]); dy <- unname(bb["ymax"] - bb["ymin"])
+    sf::st_as_sfc(sf::st_bbox(c(xmin = bb[["xmin"]] - f * dx, ymin = bb[["ymin"]] - f * dy,
+                                xmax = bb[["xmax"]] + f * dx, ymax = bb[["ymax"]] + f * dy), crs = sf::st_crs(3857)))
+}
+
 # ---- 5. Download basemap tiles -----------------------------------------------
 
-tiles_south <- maptiles::get_tiles(bbox_south, provider = basemap_provider, crop = TRUE)
-tiles_north <- maptiles::get_tiles(bbox_north, provider = basemap_provider, crop = TRUE)
+tiles_south <- maptiles::get_tiles(expand_bbox(bbox_south), provider = basemap_provider, crop = TRUE, zoom = 13)
+tiles_north <- maptiles::get_tiles(expand_bbox(bbox_north), provider = basemap_provider, crop = TRUE, zoom = 13)
 
 # ---- 6. Shared map-panel builder --------------------------------------------
 
-build_panel <- function(tiles, pts, polys = NULL, accent, title, subtitle, caption = NULL) {
+build_panel <- function(tiles, pts, polys = NULL, view, accent, title, subtitle, caption = NULL) {
     pts_df <- pts
 
     p <- ggplot() +
@@ -200,10 +222,11 @@ build_panel <- function(tiles, pts, polys = NULL, accent, title, subtitle, capti
         ) +
         ggrepel::geom_label_repel(
             data = pts_df,
-            aes(label = name, geometry = geometry),
+            aes(label = sub("Big Muskellunge Lake", "Big Muskellunge\nLake", name), geometry = geometry),
             stat = "sf_coordinates",
             seed = 42,
             nudge_x = pts_df$nudge_x,
+            nudge_y = pts_df$nudge_y,
             size = 2.6, # ~2pt smaller than the original 3.3mm (size is in mm; 2pt = 2 / .pt mm)
             fontface = "bold",
             color = "grey15",
@@ -228,13 +251,22 @@ build_panel <- function(tiles, pts, polys = NULL, accent, title, subtitle, capti
         # Wraps to 2 lines if a longer title is ever swapped in, rather than
         # letting bold text run past the panel width.
         labs(title = paste(strwrap(title, width = 32), collapse = "\n"), subtitle = subtitle, caption = caption) +
-        coord_sf(expand = FALSE) +
+        coord_sf(xlim = sf::st_bbox(view)[c("xmin", "xmax")], ylim = sf::st_bbox(view)[c("ymin", "ymax")],
+                 crs = sf::st_crs(3857), default_crs = NULL, expand = FALSE,
+                 datum = sf::st_crs(4326)) + # graticule in lon/lat, used only for axis labels
+        scale_x_continuous(breaks = scales::breaks_width(0.1), labels = function(x) sprintf("%.1f\u00b0", x)) +
+        scale_y_continuous(breaks = scales::breaks_width(0.05), labels = function(x) sprintf("%.2f\u00b0", x)) +
         theme_void(base_family = "sans") +
         theme(
             plot.title = element_text(face = "bold", size = 10, color = accent, hjust = 0, lineheight = 1.05, margin = margin(b = 3)),
             plot.subtitle = element_text(size = 8.3, color = "grey30", hjust = 0, margin = margin(t = 1, b = 6)),
             plot.caption = element_text(size = 7, color = "grey45", hjust = 0, margin = margin(t = 5)),
             plot.margin = margin(6, 8, 6, 8),
+            axis.text = element_text(size = 6.5, color = "grey30"),
+            axis.text.y = element_text(angle = 90, hjust = 0.5),
+            axis.ticks = element_line(color = accent, linewidth = 0.4),
+            axis.ticks.length = unit(2, "pt"),
+            panel.grid = element_blank(),
             panel.border = element_rect(color = accent, fill = NA, linewidth = 1.1)
         )
 
@@ -242,14 +274,14 @@ build_panel <- function(tiles, pts, polys = NULL, accent, title, subtitle, capti
 }
 
 p_south <- build_panel(
-    tiles_south, pts_south, polys_south,
+    tiles_south, pts_south, polys_south, view = bbox_south,
     accent = color_south,
     title = "Southern Lakes",
     subtitle = "Dane County, Wisconsin"
 )
 
 p_north <- build_panel(
-    tiles_north, pts_north, polys_north,
+    tiles_north, pts_north, polys_north, view = bbox_north,
     accent = color_north,
     title = "Northern Lakes",
     subtitle = "Vilas County, Wisconsin"
@@ -345,10 +377,9 @@ write_captions(data.table::data.table(
     file = output_file,
     title = "NTL-LTER study lake regions",
     caption = paste0(
-        "Locations of the 11 NTL-LTER primary study lakes across two contrasting Wisconsin landscapes: ",
-        "Dane County (southern, 4 lakes) and Vilas County (northern, 7 lakes). Each lake's outline is filled ",
-        "light blue from NHD polygons (data/GIS/NHLDshp); no shapefile is bundled for Fish Lake, which keeps ",
-        "a plain point marker. Southern panel includes a globe inset locating Madison, WI globally. ",
+        "Locations of the 9 NTL-LTER primary study lakes across two contrasting Wisconsin landscapes: ",
+        "Dane County (southern, 2 lakes) and Vilas County (northern, 7 lakes). Each lake's outline is filled ",
+        "light blue from NHD polygons (data/GIS/NHLDshp). Southern panel includes a globe inset locating Madison, WI globally. ",
         "Basemap: Esri World Light Gray Canvas."
     )
 ))

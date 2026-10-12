@@ -1,4 +1,4 @@
-## Fig 3: August DO (% saturation) profile by decade, all 11 NTL lakes. Data: EDI 29.
+## Fig 3: August DO (% saturation) profile by decade, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
 ## Four August MEDIAN profiles per lake -- 1985-1995, 1995-2005, 2005-2015, 2015-2025 -- overlaid
 ## on one panel per lake, coloured blue (earliest) -> green -> orange -> red (most recent) so a
 ## profile sliding right/left/up/down across the four lines reads as a multi-decade progression,
@@ -22,6 +22,8 @@ meta <- data.table(
            "Mendota","Monona","Fish","Wingra"),
   region=c(rep("Northern",7), rep("Southern",4)),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
+## Fish Lake (FI) and Lake Wingra (WI) are dropped from every figure.
+meta <- meta[!lakeid %in% c("FI","WI")]
 
 ## Crystal 2012-13 dropped everywhere: whole-lake mixing experiment, not natural conditions
 p <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid & !is.na(o2sat) &
@@ -87,7 +89,7 @@ meta[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</spa
                             name, tolower(region))]
 striplabs <- setNames(meta$striplab, meta$lakeid)
 lake_ord <- meta[order(region,-zmax), lakeid]
-north <- lake_ord[1:7]; south <- lake_ord[8:11]
+north <- lake_ord[1:7]; south <- lake_ord[8:length(lake_ord)]
 
 pal <- setNames(c("#000000","#2166ac","#1a9850","#e08214","#b2182b"), lv)
 ## the 1928 line is a single historical cast, not a multi-year median like the others -- dashed,
@@ -100,7 +102,7 @@ xr <- range(do$o2sat, na.rm=TRUE)
 ## an empty facet_wrap panel still draws its axes/gridlines, which read as a broken plot rather
 ## than an intentional gap.
 ## legend.position="none": patchwork's automatic guides="collect" kept producing two duplicate
-## copies of the (structurally identical) legend across these 11 independent ggplots rather than
+## copies of the (structurally identical) legend across these independent ggplots rather than
 ## merging them into one, for reasons that resisted a few different fixes -- extracted and placed
 ## manually below instead (see extract_legend()).
 th <- theme_minimal(base_size=6.5) + theme(
@@ -157,7 +159,7 @@ write_captions <- function(new_caps){
   cat("wrote", path, "\n")
 }
 caption <- paste0(
-  "August dissolved-oxygen (% saturation) depth profile, all 11 lakes, four overlaid decade MEDIANS: ",
+  "August dissolved-oxygen (% saturation) depth profile, all 9 lakes, four overlaid decade MEDIANS: ",
   "1985-1995, 1995-2005, 2005-2015, 2015-2025 (blue -> green -> orange -> red, earliest to most recent). ",
   "Each profile is the per-depth median O2 (% sat) across every August cast at that lake within that decade ",
   "(depth rounded to the nearest metre before pooling). Panels ordered north then south, by max depth ",
