@@ -54,7 +54,7 @@ library(data.table)
 basemap_provider <- "Esri.WorldGrayCanvas"
 
 # Accent colors, one per region.
-color_south <- "#0E7C86" # teal — southern (Yahara) lakes
+color_south <- "#a1783f" # teal — southern (Yahara) lakes
 color_north <- "#1F4B3F" # forest green — northern (Northwoods) lakes
 
 output_file <- "figures/figMap_regions.png"
@@ -261,7 +261,8 @@ build_panel <- function(tiles, pts, polys = NULL, view, accent, title, subtitle,
             plot.title = element_text(face = "bold", size = 10, color = accent, hjust = 0, lineheight = 1.05, margin = margin(b = 3)),
             plot.subtitle = element_text(size = 8.3, color = "grey30", hjust = 0, margin = margin(t = 1, b = 6)),
             plot.caption = element_text(size = 7, color = "grey45", hjust = 0, margin = margin(t = 5)),
-            plot.margin = margin(6, 8, 6, 8),
+            # plot.margin = margin(6, 8, 6, 8),
+            plot.margin = margin(3,4,3,4),
             axis.text = element_text(size = 6.5, color = "grey30"),
             axis.text.y = element_text(angle = 90, hjust = 0.5),
             axis.ticks = element_line(color = accent, linewidth = 0.4),
@@ -322,11 +323,11 @@ us_inset <- ggplot() +
     geom_sf(data = point_globe, color = "#D7191C", size = 2.2) +
     theme_void() +
     theme(
-        panel.background = element_rect(fill = color_south, color = NA),
-        plot.background = element_rect(fill = color_south, color = NA),
+        panel.background = element_rect(fill = '#244e69', color = NA),
+        plot.background = element_rect(fill = '#244e69', color = NA),
         # White frame so the inset pops against the basemap it sits on top of.
-        panel.border = element_rect(color = "white", fill = NA, linewidth = 1.1),
-        plot.margin = margin(3, 3, 3, 3)
+        panel.border = element_rect(color = "white", fill = NA, linewidth = 0.3),
+        plot.margin = margin(1,1,1,1)
     )
 
 # plot.background is set on each base panel here (rather than with a trailing
@@ -373,6 +374,7 @@ write_captions <- function(new_caps) {
     data.table::fwrite(rbind(old[!file %in% new_caps$file], new_caps), path)
     cat("wrote", path, "\n")
 }
+
 write_captions(data.table::data.table(
     file = output_file,
     title = "NTL-LTER study lake regions",
