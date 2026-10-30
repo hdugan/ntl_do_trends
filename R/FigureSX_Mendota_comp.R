@@ -125,7 +125,7 @@ panel <- function(a, depths, pal, title, show_y, tile_col="white") {
     geom_tile(aes(width=twidth), height=0.92, color=tile_col, linewidth=0.12) +
     ## month starts drawn dark + dashed over the tiles, so they read differently from the
     ## white mid-month tile seams; labels sit mid-month between them
-    geom_vline(xintercept=mbound, color="grey15", linewidth=0.2, linetype="22") +
+    geom_vline(xintercept=mbound, color="grey15", linewidth=0.1, linetype="22") +
     scale_y_discrete(drop=FALSE) + xsc + pal +
     labs(title=title, x=NULL, y=if (show_y) "Depth" else NULL) +
     theme_minimal(base_size=6) +
@@ -165,8 +165,14 @@ for (v in DO) {
   p_odf <- panel(classify(diff_agg(v$a06, v$amd), v$thr), DEPTHS$do, v$dpal, paste(v$lab, "— difference"), FALSE, tile_col="white")
   ## each row collects its OWN legends (the absolute scale + its difference key) at its right
   ## edge, so the keys sit beside the panels they describe instead of in one detached stack
-  row_t <- (p_t06 | p_tmd | p_tdf) + plot_layout(guides="collect")
-  row_o <- (p_o06 | p_omd | p_odf) + plot_layout(guides="collect")
+  row_t <- (p_t06 | p_tmd | p_tdf) + plot_layout(guides="collect") &
+    theme(legend.box.background = element_rect(colour = "black", fill = "grey95", linewidth = 0.2),
+      legend.box.margin     = margin(4, 9, 4, 9))   # padding between the box edge and the legends
+    
+  row_o <- (p_o06 | p_omd | p_odf) + plot_layout(guides="collect") &
+    theme(legend.box.background = element_rect(colour = "black", fill = "grey95", linewidth = 0.2),
+          legend.box.margin     = margin(4, 4, 4, 4))   # padding between the box edge and the legends
+  
   g <- (row_t / row_o) + plot_layout(heights=c(length(DEPTHS$temp), length(DEPTHS$do))) +
     plot_annotation(title="Lake Mendota: 1906 vs. 2016\u20132025",
                     theme=theme(plot.title=element_text(face="bold", size=8)))
