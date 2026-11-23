@@ -27,6 +27,60 @@ zmax <- data.table(
 deep_lakes <- zmax[zmax > ZMAX_MIN, lakeid]
 
 prof <- fread("data/profiles.csv")
+prof[, source := "NTL"]
+
+## --- add Lake Mendota MEMO profiles (EDI knb-lter-ntl.415.3; data/MEMO/) --------------------
+## Extra Mendota temperature/DO profiles, 2006-2019, from three files: a YSI sonde on the
+## Poseidon (2014-2019; temp + DO) and earlier hand-recorded casts (temp file + DO file,
+## YSI MPS 556 / Hydrolab / YSI Pro Plus). Checked against NTL casts on shared days:
+## temperature agrees closely (median diff ~0 degC, r = 0.99); DO follows the NTL profile
+## shape but calibration offsets vary by day (about +/-1 mg/L), so it is screened:
+##   - DO dates whose field notes report meter problems are dropped (DO only; temp kept),
+##     and casts noted as "Not at deep hole" are dropped entirely
+##   - DO < 0 or > 20 mg/L (incl. -99999 missing codes) and temp <= 0 are set to NA
+##   - one cast per day (the earliest); duplicate readings at a depth are averaged
+##   - any day with an NTL Mendota cast keeps the NTL cast only (NTL wins)
+## MEMO has no o2sat; it is computed here with NTL's own convention, which is exactly
+## 1.0613 x 100 x o2 / (standard fresh-water O2 saturation at 1 atm; Benson & Krause form)
+## -- checked on every NTL Mendota reading (ratio 1.0613 at all temperatures and decades).
+## Set USE_MEMO <- FALSE to rebuild profiles_clean.csv from NTL data alone.
+USE_MEMO <- TRUE
+if(USE_MEMO){
+  mdate <- function(d) d[, date := as.IDate(sprintf("%d-%02d-%02d", Year, Month, Day))]
+  first_cast <- function(d){ d[is.na(Hour), Hour := 0L]; d[d[, .I[Hour == min(Hour)], by=date]$V1] }
+
+  ysi <- mdate(fread("data/MEMO/robin_MEMO_YSI-Poseidon_2014-2019.csv"))
+  ysi <- first_cast(ysi)[, .(date, depth=as.numeric(Depth.m), wtemp=Temperature.C, o2=Dissolved.Oxygen.mg.L)]
+
+  mt  <- mdate(fread("data/MEMO/robin_MEMO_non-Poseidon_water_temps.csv"))
+  mo  <- mdate(fread("data/MEMO/robin_MEMO_non-Poseidon_dissolved_oxygen.csv"))
+  offsite  <- mo[grepl("Not at deep hole", Notes.Dissolved.Oxygen, ignore.case=TRUE), unique(date)]
+  bad_do   <- mo[grepl(paste("suspicious|unstable|not working|broken|estimated|never stable|out of range",
+                             "not stabiliz|sporadic|not properly warmed|wrong pressure|incorrect pressure", sep="|"),
+                       Notes.Dissolved.Oxygen, ignore.case=TRUE), unique(date)]
+  mt <- first_cast(mt)[, .(wtemp=mean(Water.Temp.C, na.rm=TRUE)), by=.(date, depth=Depth.m)]
+  mo <- first_cast(mo[!date %in% bad_do])[, .(o2=mean(Dissolved.Oxygen.mg.L, na.rm=TRUE)), by=.(date, depth=Depth.m)]
+  hand <- merge(mt, mo, by=c("date","depth"), all=TRUE)
+
+  memo <- rbind(ysi, hand[!date %in% ysi$date])          # YSI file wins if a day is in both
+  memo <- memo[!date %in% offsite]
+  memo[!is.finite(o2) | o2 < 0 | o2 > 20, o2 := NA_real_]
+  memo[!is.finite(wtemp) | wtemp <= 0, wtemp := NA_real_]
+  memo <- memo[is.finite(wtemp) | is.finite(o2)]
+  n_shared <- memo[date %in% prof[lakeid == "ME", sampledate], uniqueN(date)]
+  memo <- memo[!date %in% prof[lakeid == "ME", sampledate]]   # NTL wins on shared days
+
+  o2_sat_ref <- function(T){ Ts <- log((298.15 - T)/(273.15 + T))
+    1.42905 * exp(2.00907 + 3.22014*Ts + 4.0501*Ts^2 + 4.94457*Ts^3 - 0.256847*Ts^4 + 3.88767*Ts^5) }
+  memo[, o2sat := round(1.0613 * 100 * o2 / o2_sat_ref(wtemp), 1)]
+
+  memo <- memo[, .(lakeid="ME", year4=year(date), sampledate=date, depth, rep=1L, sta=NA_integer_,
+                   event="MEMO", wtemp, o2, o2sat, source="MEMO")]
+  cat(sprintf("MEMO: added %d casts (%d with DO); dropped %d off-site casts, DO on %d dates with meter-problem notes, %d days already sampled by NTL\n",
+              uniqueN(memo$sampledate), memo[is.finite(o2), uniqueN(sampledate)], length(offsite), length(bad_do), n_shared))
+  prof <- rbind(prof, memo, fill=TRUE)
+  setorder(prof, lakeid, sampledate, depth)
+}
 
 ## for one variable: within each cast, order by depth and flag the deepest valid reading if it
 ## jumps up by more than `thresh` from the next-shallowest valid reading
