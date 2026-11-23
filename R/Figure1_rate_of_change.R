@@ -20,6 +20,17 @@ prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15
 
+## ANOXIC FLOOR: DO below 0.5 mg/L is set to 0 (and o2sat to 0). Near-zero readings in anoxic water
+## depend on sensor zero/offset and on how values were recorded (e.g. early NTL values in 0.1 mg/L
+## steps), so a drift from ~0.3 to ~0.05 mg/L in water that is anoxic either way otherwise shows up as
+## a highly significant (low-variance) "trend" -- e.g. Mendota 20-24 m in late July. Flooring makes
+## anoxic water trendless; only movement across or above the threshold counts.
+DO_FLOOR <- 0.5
+n_floor <- prof[is.finite(o2) & o2 < DO_FLOOR, .N]
+prof[is.finite(o2) & o2 < DO_FLOOR, `:=`(o2 = 0, o2sat = 0)]
+prof[!is.finite(o2) & is.finite(o2sat) & o2sat < 5, o2sat := 0]   # ~0.5 mg/L equivalent when only %sat exists
+cat(sprintf("anoxic floor: %d DO readings < %.1f mg/L set to 0\n", n_floor, DO_FLOOR))
+
 ## Per-region year range for the panel titles -- Southern lakes join the record later
 ## (1995/96) than Northern (1981), so these must NOT share a single hardcoded range.
 ryrs <- merge(prof[, .(lakeid, year)], meta[, .(lakeid, region)], by = "lakeid")[
@@ -86,10 +97,49 @@ cell <- yr[, { n<-.N; sp<- if(n>0) diff(range(year)) else 0
 ## proportion instead, the standard fix for many correlated tests shown as a significance grid.
 cell[!is.na(p), q := p.adjust(p, method="BH"), by=lakeid]
 
+## ---- BLOCK significance (for the fig01_rate_block_*.png versions) ------------------------------
+## Colours stay the per-cell trends; significance is instead tested on depth BLOCKS within each
+## half-month: each year's block value is the mean of its depth cells' yearly residuals, then
+## Sen + Mann-Kendall, BH FDR per lake across all its block tests (all variables), as for cells.
+## Pooling adjacent depths gives fewer, less noisy tests, so coherent features that fail cell by
+## cell (e.g. autumn surface warming) can pass. Block height scales with lake depth so shallow
+## lakes aren't one or two giant boxes: BLK_DEEP m for zmax >= 10 m, 2 m for 5-10 m, 1 m below.
+BLK_DEEP <- if(exists("BLK_DEEP_OVERRIDE")) BLK_DEEP_OVERRIDE else 5
+blk_size <- function(z) fifelse(z >= 10, BLK_DEEP, fifelse(z >= 5, 2, 1))
+## block index; a partial block at the bottom (fewer depth bins than a full block, e.g. Trout's
+## 30-32 m below 25-29 m) is merged into the block above, so there are no sliver boxes at the bottom
+lake_maxd <- cell[!is.na(slope), .(maxd=max(dbin)), by=lakeid][, setNames(maxd, lakeid)]   # deepest bin with a trend, per lake
+blk_of <- function(dbin, lakeid){
+  z <- unname(zmax_lookup[lakeid]); sz <- blk_size(z); st <- fifelse(z < 10, 0.5, 1)
+  b <- floor(dbin / sz)
+  md <- unname(lake_maxd[lakeid])
+  bmax <- floor(md / sz)
+  full <- sz / st                                     # depth bins in a full block
+  nlast <- (md - bmax*sz) / st + 1                    # depth bins in the bottom block
+  fifelse(b == bmax & bmax > 0 & nlast < full, bmax - 1, b)
+}
+yr[, blk := blk_of(dbin, lakeid)]
+bkyr <- yr[, .(v=mean(v), nd=.N), by=.(lakeid,var,tbin,twidth,blk,year)]
+bkyr[, ndmax := max(nd), by=.(lakeid,var,tbin,blk)]
+bkyr <- bkyr[nd >= 0.5*ndmax]          # a year counts only if it has at least half the block's depths
+bcell <- bkyr[, { n<-.N; sp<- if(n>0) diff(range(year)) else 0
+  if(n>=MIN_YR_TREND && sp>=MIN_SPAN)
+    .(bslope=sen(v,year)*10,
+      bp=tryCatch(suppressWarnings(cor.test(year, v, method="kendall", exact=FALSE)$p.value), error=function(e) NA_real_))
+  else .(bslope=NA_real_, bp=NA_real_) }, by=.(lakeid,var,tbin,twidth,blk)]
+bcell[!is.na(bp), bq := p.adjust(bp, method="BH"), by=lakeid]
+bcell[, bsig := !is.na(bq) & bq<0.05]
+
 w <- cell[!is.na(slope)]
 w[, sig := !is.na(q) & q<0.05]
 w <- merge(w, meta, by="lakeid")
 w[, dstep := fifelse(zmax<10, 0.5, 1)]  # matches the depth-bin width used to build dbin above
+
+## Per-cell trend table: one source of truth for anything summarising this figure
+## (Figure6_volatility.R reads it rather than re-fitting).
+fwrite(w[, .(lakeid, name, region, zmax, var, tbin, twidth, dbin, dstep, slope, p, q, sig, nyr)],
+       "figures/fig01_cell_trends.csv")
+cat("wrote figures/fig01_cell_trends.csv\n")
 
 ## ---- context arrows beside each lake name: surface DOC trend and Secchi trend -----------------
 ## Pulled from figures/fig02_trends_table.csv (written by Figure2_clarity_trends.R) instead of
@@ -118,9 +168,20 @@ arrows[, lab_md := sprintf("<span style='font-size:7pt'>DOC</span>%s&nbsp;&nbsp;
         glyph(doc_s,doc_p), glyph(sec_s,sec_p))]
 
 w <- merge(w, arrows[, .(lakeid, lab_md)], by="lakeid", all.x=TRUE)
-w[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span><br>%s", name, fifelse(is.na(lab_md), "", lab_md))]
+## n = number of profiles (distinct sampling dates with temperature or DO) per lake in the Apr 1-Nov 15 window
+ncast <- prof[is.finite(wtemp) | is.finite(o2) | is.finite(o2sat), .(ncast=uniqueN(date)), by=lakeid]
+w <- merge(w, ncast, by="lakeid", all.x=TRUE)
+w[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span><br>%s<br><span style='font-size:5pt;color:#555555'>n = %s profiles</span>",
+                        name, fifelse(is.na(lab_md), "", lab_md), format(ncast, big.mark=","))]
 ord <- unique(w[, .(name, striplab, region, zmax)])[order(region,-zmax)]$striplab
 w[, strip := factor(striplab, levels=ord)]
+
+## block outlines in plot coordinates: span of the cells actually drawn in each block
+bx <- w[, .(ymin=min(dbin)-dstep[1]/2, ymax=max(dbin)+dstep[1]/2),
+        by=.(lakeid, var, tbin, twidth, blk=blk_of(dbin, lakeid), strip, region, name, zmax)]
+bx <- merge(bx, bcell[, .(lakeid, var, tbin, blk, bslope, bq, bsig)], by=c("lakeid","var","tbin","blk"))
+fwrite(bx[, .(lakeid, name, var, tbin, depth_top=ymin, depth_bottom=ymax, slope=bslope, q=bq, sig=bsig)],
+       "figures/fig01_block_trends.csv")
 
 ## Non-significant cells get a light diagonal stroke (one per tile). This is deliberately a plain
 ## geom_segment rather than ggpattern: ggpattern rasterizes every tile separately and takes many
@@ -150,12 +211,15 @@ th <- theme_minimal(base_size=6.5) + theme(
   axis.title.y=element_text(size=7.5),
   strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
 
-block <- function(reg, vv, pal, right, ttl, sub){
+block <- function(reg, vv, pal, right, ttl, sub, mode="cell"){
   d <- w[region==reg & var==vv]
   ggplot(d, aes(tbin,dbin,fill=slope)) +
     geom_tile(aes(width=twidth, height=dstep)) +
-    geom_segment(data=hatch(d), aes(x=x,xend=xend,y=y,yend=yend), inherit.aes=FALSE,
-                 color="grey25", linewidth=0.16, alpha=0.5) +
+    { if(mode=="cell") geom_segment(data=hatch(d), aes(x=x,xend=xend,y=y,yend=yend), inherit.aes=FALSE,
+                                    color="grey25", linewidth=0.16, alpha=0.5)
+      else geom_rect(data=bx[region==reg & var==vv & bsig==TRUE],
+                     aes(xmin=tbin-twidth/2, xmax=tbin+twidth/2, ymin=ymin, ymax=ymax),
+                     inherit.aes=FALSE, fill=NA, color="black", linewidth=0.35) } +
     geom_vline(xintercept=mbound, color="white", linewidth=0.3, alpha=0.8) +
     facet_grid2(strip ~ ., scales="free_y", switch=NULL, render_empty=FALSE) +
     scale_y_reverse(expand=c(0,0), breaks=scales::breaks_pretty(3)) + xsc + pal + th +
@@ -179,11 +243,11 @@ write_captions <- function(new_caps){
   cat("wrote", path, "\n")
 }
 
-make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
-  NT <- block("Northern","wtemp", pal_T, FALSE, sprintf("Northern Forested Lakes (%d–%d)", nyr$lo, nyr$hi), "Trend in temperature")
-  NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab)
-  ST <- block("Southern","wtemp", pal_T, FALSE, sprintf("Southern Ag/Urban Lakes (%d–%d)", syr$lo, syr$hi), "Trend in temperature")
-  SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab)
+make_fig <- function(dovar, dopal, dolab, subtitle, outfile, mode="cell"){
+  NT <- block("Northern","wtemp", pal_T, FALSE, sprintf("Northern Forested Lakes (%d–%d)", nyr$lo, nyr$hi), "Trend in temperature", mode)
+  NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab, mode)
+  ST <- block("Southern","wtemp", pal_T, FALSE, sprintf("Southern Ag/Urban Lakes (%d–%d)", syr$lo, syr$hi), "Trend in temperature", mode)
+  SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab, mode)
   left  <- (NT / ST) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
   right <- (NO / SO) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
   design <- (left | right) + plot_layout(guides="keep")
@@ -193,14 +257,28 @@ make_fig <- function(dovar, dopal, dolab, subtitle, outfile){
 }
 
 yrs <- range(prof$year)
-base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant after Benjamini-Hochberg FDR correction (per lake, across all its depth/time/variable cells; Mann-Kendall q<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend.\nBeside each lake name: full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
+base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant after Benjamini-Hochberg FDR correction (per lake, across all its depth/time/variable cells; Mann-Kendall q<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend. DO below 0.5 mg/L is set to 0 (anoxic) so that drift in near-zero sensor readings cannot either.\nBeside each lake name: n = number of profiles used, and full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
    yrs[1], yrs[2], MIN_YR_TREND, MIN_SPAN)
 make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
   paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig01_rate_mgL.png")
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
   paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig01_rate_sat.png")
 
-write_captions(rbindlist(captions))
+## block-significance versions: same colours, boxes around significant depth blocks instead of hatching
+OUTDIR <- if(exists("OUTDIR_OVERRIDE")) OUTDIR_OVERRIDE else "figures"
+bbase <- sprintf(paste0("April–mid-November. Colours: Theil-Sen slope per DECADE over the full %d–%d record for each depth x half-month cell ",
+  "(trend in the seasonally-detrended residual; DO < 0.5 mg/L set to 0 as anoxic). Significance is tested on depth BLOCKS within each half-month -- %d m in lakes deeper than ",
+  "10 m, 2 m in lakes of 5-10 m, 1 m in Crystal Bog -- using each year's block-mean residual (Mann-Kendall, Benjamini-Hochberg q<0.05 per lake ",
+  "across all its block tests); significant blocks are outlined in black. Blank = fewer than %d years or <%d-year span.\n",
+  "Beside each lake name: n = number of profiles used, and full-record trend in surface DOC and in Secchi depth — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05)."),
+  yrs[1], yrs[2], BLK_DEEP, MIN_YR_TREND, MIN_SPAN)
+make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)", bbase, file.path(OUTDIR, "fig01_rate_block_mgL.png"), mode="block")
+make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)", paste0(bbase, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."),
+         file.path(OUTDIR, "fig01_rate_block_sat.png"), mode="block")
+cat("\n=== % of drawn area in significant blocks, by lake & variable ===\n")
+print(dcast(bx[, .(pct=round(100*mean(bsig))), by=.(name, var)], name ~ var, value.var="pct"))
+
+if(OUTDIR == "figures") write_captions(rbindlist(captions))
 
 ## Console summary. NOTE: deliberately summarises ALL cells, not just the significant ones.
 ## Taking the median over only q<0.05 cells is selection-biased (winner's curse) -- conditioning on

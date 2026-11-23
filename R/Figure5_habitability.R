@@ -35,7 +35,7 @@ prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # A
 g <- prof[, { o<-order(depth); dd<-depth[o]; yy<-o2[o]
   dstep <- if(zmax_lookup[[lakeid]] < 10) 0.5 else 1
   if(length(dd)>=3 && diff(range(dd))>=1){ zg<-seq(0,max(dd),dstep); zg<-zg[zg>=min(dd)]
-    .(dbin=zg, dstep=dstep, val=approx(dd,yy,zg,rule=2)$y) } else .(dbin=numeric(0),dstep=numeric(0),val=numeric(0)) },
+    .(dbin=zg, dstep=dstep, val=approx(dd,yy,zg,rule=2,ties=mean)$y) } else .(dbin=numeric(0),dstep=numeric(0),val=numeric(0)) },
   by=.(lakeid, date, year, doy)]
 
 ## half-month bins, identical edges to Figure1_rate_of_change.R (Apr 1 - Nov 16)
@@ -45,8 +45,11 @@ g[, `:=`(tbin=(hedges[bi]+hedges[bi+1])/2, twidth=hedges[bi+1]-hedges[bi])]
 
 g[, era := fifelse(year < ERA_BREAK, "baseline", "recent")]
 
-## per lake x depth bin x half-month bin x era: median DO and how many distinct years back it
-agg <- g[, .(med=median(val), n_yr=uniqueN(year)), by=.(lakeid, dbin, dstep, tbin, twidth, era)]
+## per lake x depth bin x half-month bin x era: median DO and how many distinct years back it.
+## Median of per-YEAR medians (not of all casts pooled), so a year sampled twice in a half-month
+## window doesn't get double weight -- same rule as Figure1_rate_of_change.R / Figure2.
+yrm <- g[, .(v=median(val)), by=.(lakeid, dbin, dstep, tbin, twidth, era, year)]
+agg <- yrm[, .(med=median(v), n_yr=.N), by=.(lakeid, dbin, dstep, tbin, twidth, era)]
 agg[, below := med < HYPOXIA_THRESHOLD]
 
 wide <- dcast(agg, lakeid+dbin+dstep+tbin+twidth ~ era, value.var=c("below","n_yr"))
@@ -86,12 +89,12 @@ g_plot <- ggplot(wide, aes(x=tbin, y=dbin, fill=state)) +
   guides(fill=guide_legend(nrow=2, byrow=TRUE)) +
   facet_wrap(~strip, ncol=3, scales="free_y") +
   labs(x=NULL, y="Depth (m)") +
-  theme_minimal(base_size=10.5) +
-  theme(panel.grid=element_blank(), legend.position="bottom", legend.key.size=unit(0.4,"cm"),
-        legend.text=element_text(size=8), axis.text.x=element_text(size=7.5),
-        strip.text=element_text(face="bold", size=9.5), panel.spacing=unit(0.6,"lines"))
+  theme_minimal(base_size=7) +
+  theme(panel.grid=element_blank(), legend.position="bottom", legend.key.size=unit(0.3,"cm"),
+        legend.text=element_text(size=6), axis.text=element_text(size=5.5),
+        strip.text=element_text(face="bold", size=7), panel.spacing=unit(0.5,"lines"))
 
-ggsave("figures/fig05_habitability.png", g_plot, width=9.5, height=7.5, dpi=500, bg="white")
+ggsave("figures/fig05_habitability.png", g_plot, width=6.5, height=5.6, dpi=500, bg="white")
 cat("wrote figures/fig05_habitability.png\n")
 
 ## Title + caption off the PNG, into the shared captions.csv (same convention as the other fig*.R)
@@ -108,7 +111,7 @@ write_captions(data.table(
     "For each lake, depth window (0.5 m bins for lakes under 10 m zmax, 1 m otherwise -- same ",
     "rule as Figure1_rate_of_change.R), and half-month period (April 1-November 15, same bin edges ",
     "as Figure1_rate_of_change.R), median dissolved oxygen (mg/L) ",
-    "is compared between a baseline era (pre-2016) and a recent era (2016-2025), against a 3 mg/L ",
+    "(median of yearly medians) is compared between a baseline era (pre-2016) and a recent era (2016-2025), against a 3 mg/L ",
     "cold/coolwater-fish habitat threshold. Dark red = remained below 3 mg/L in both eras ",
     "(chronically hypoxic); orange = crossed from at-or-above to below 3 mg/L (newly hypoxic, lost ",
     "habitat); green = crossed from below to at-or-above 3 mg/L (newly oxygenated, gained habitat); ",
