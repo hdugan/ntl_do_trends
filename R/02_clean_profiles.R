@@ -20,7 +20,7 @@ TEMP_JUMP_MAX <- 5   # degC: max allowed increase at the single deepest reading 
 DO_JUMP_MAX   <- 20  # %sat: max allowed increase at the single deepest reading vs the next-shallowest
 ZMAX_MIN      <- 10  # m: only apply the check to lakes deeper than this
 
-## max depth (m) of each of the 11 NTL primary study lakes, same values used in fig12
+## max depth (m) of each of the 11 NTL primary study lakes, same values used in Figure1_rate_of_change.R
 zmax <- data.table(
   lakeid=c("TR","BM","CR","SP","AL","TB","CB","ME","MO","FI","WI"),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
@@ -62,6 +62,9 @@ if(USE_MEMO){
   mo <- first_cast(mo[!date %in% bad_do])[, .(o2=mean(Dissolved.Oxygen.mg.L, na.rm=TRUE)), by=.(date, depth=Depth.m)]
   hand <- merge(mt, mo, by=c("date","depth"), all=TRUE)
 
+  ## Poseidon cast 2018-08-01: DO reads 0.00 mg/L from 3 m down in 24 degC epilimnion water (sensor
+  ## failure; memo_ysi has a different, plausible cast that day) -> DO dropped, temperature kept
+  ysi[date == as.IDate("2018-08-01"), o2 := NA_real_]
   memo <- rbind(ysi, hand[!date %in% ysi$date])          # YSI file wins if a day is in both
   memo <- memo[!date %in% offsite]
   memo[!is.finite(o2) | o2 < 0 | o2 > 20, o2 := NA_real_]
@@ -125,8 +128,7 @@ manual <- prof[lakeid == manual_lake & sampledate == manual_date & is.finite(o2s
 removed <- rbind(removed, manual)
 
 ## --- manual removal: Crystal Lake 2012-2013, whole-lake mixing experiment ------------------
-## Crystal was experimentally whole-lake mixed in 2012-2013 (the source project's fig08/09/11/12
-## scripts already exclude these two years for the same reason). Temperature and DO during this
+## Crystal was experimentally whole-lake mixed in 2012-2013. Temperature and DO during this
 ## period reflect the manipulation, not natural dynamics, so all wtemp and o2/o2sat for CR in
 ## 2012-2013 are removed here too -- an experimental artifact, not a sensor error, but treated
 ## the same way so nothing downstream has to special-case it.

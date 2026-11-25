@@ -1,8 +1,7 @@
 ## Diagnostics: every individual temp & DO(%sat) profile, per lake x half-month bin, split
 ## baseline (pre-2016) vs recent (2016-2025) and colored by cast date. Data: EDI 29.
-## Same half-month bins as fig12 (Apr 1 - Nov 16), so these diagnostics can be read side-by-side
-## with the fig12 heatmap cells they correspond to -- extends the old Sep-only diagnostics to
-## the full season.
+## Same half-month bins as Figure1_rate_of_change.R (Apr 1 - Nov 16), so these diagnostics can be
+## read side-by-side with the cells of that figure.
 suppressMessages({library(data.table); library(ggplot2); library(scales); library(patchwork)})
 
 meta <- data.table(
@@ -14,7 +13,7 @@ prof <- fread("data/profiles.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
 prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15
 
-## half-month bins, identical edges to fig12
+## half-month bins, identical edges to Figure1_rate_of_change.R
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)
 hlabs  <- c("apr1-15","apr16-30","may1-15","may16-31","jun1-15","jun16-30","jul1-15","jul16-31",
             "aug1-15","aug16-31","sep1-15","sep16-30","oct1-15","oct16-31","nov1-15")
