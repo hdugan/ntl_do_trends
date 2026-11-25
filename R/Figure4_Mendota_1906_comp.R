@@ -155,14 +155,14 @@ cat(sprintf("diff ranges -- temp %.1f to %.1f; mg/L %.1f to %.1f; %%sat %.0f to 
             min(diff_agg(DO$sat$a06, DO$sat$amd)$m), max(diff_agg(DO$sat$a06, DO$sat$amd)$m)))
 
 ## rows = variable, columns = 1906 | 2016-2025 | difference
-p_t06 <- panel(a_t06, DEPTHS$temp, pal_temp,  "Temperature — 1906", TRUE)
-p_tmd <- panel(a_tmd, DEPTHS$temp, pal_temp,  "Temperature — 2016–2025", FALSE)
-p_tdf <- panel(classify(a_tdf, THRESH[["temp"]]), DEPTHS$temp, pal_tdiff, "Temperature — difference", FALSE, tile_col="white")
-fig_height <- 0.6 + 0.135 * sum(lengths(DEPTHS))   # 6.5 in wide, 500 dpi (journal single-page width)
+p_t06 <- panel(a_t06, DEPTHS$temp, pal_temp,  "A  Temperature, 1906", TRUE)
+p_tmd <- panel(a_tmd, DEPTHS$temp, pal_temp,  "B  Temperature, 2016–2025", FALSE)
+p_tdf <- panel(classify(a_tdf, THRESH[["temp"]]), DEPTHS$temp, pal_tdiff, "C  Temperature, difference", FALSE, tile_col="white")
+fig_height <- 0.45 + 0.135 * sum(lengths(DEPTHS))   # 6.5 in wide, 500 dpi (journal single-page width)
 for (v in DO) {
-  p_o06 <- panel(v$a06, DEPTHS$do, v$pal,  paste(v$lab, "— 1906"), TRUE)
-  p_omd <- panel(v$amd, DEPTHS$do, v$pal,  paste(v$lab, "— 2016–2025"), FALSE)
-  p_odf <- panel(classify(diff_agg(v$a06, v$amd), v$thr), DEPTHS$do, v$dpal, paste(v$lab, "— difference"), FALSE, tile_col="white")
+  p_o06 <- panel(v$a06, DEPTHS$do, v$pal,  paste0("D  ", v$lab, ", 1906"), TRUE)
+  p_omd <- panel(v$amd, DEPTHS$do, v$pal,  paste0("E  ", v$lab, ", 2016–2025"), FALSE)
+  p_odf <- panel(classify(diff_agg(v$a06, v$amd), v$thr), DEPTHS$do, v$dpal, paste0("F  ", v$lab, ", difference"), FALSE, tile_col="white")
   ## each row collects its OWN legends (the absolute scale + its difference key) at its right
   ## edge, so the keys sit beside the panels they describe instead of in one detached stack
   row_t <- (p_t06 | p_tmd | p_tdf) + plot_layout(guides="collect") &
@@ -173,9 +173,8 @@ for (v in DO) {
     theme(legend.box.background = element_rect(colour = "black", fill = "grey95", linewidth = 0.2),
           legend.box.margin     = margin(4, 4, 4, 4))   # padding between the box edge and the legends
   
-  g <- (row_t / row_o) + plot_layout(heights=c(length(DEPTHS$temp), length(DEPTHS$do))) +
-    plot_annotation(title="Lake Mendota: 1906 vs. 2016\u20132025",
-                    theme=theme(plot.title=element_text(face="bold", size=8)))
+  ## no figure title (it goes in the caption); panels lettered A-F in their titles, as in Figure 2
+  g <- (row_t / row_o) + plot_layout(heights=c(length(DEPTHS$temp), length(DEPTHS$do)))
   ggsave(v$file, g, width=6.5, height=fig_height, dpi=500, bg="white")
   cat("wrote", v$file, "\n")
 }
@@ -189,8 +188,8 @@ write_captions <- function(new_caps) {
 }
 dlist <- function(x) paste0(paste(head(x, -1), collapse=", "), " and ", tail(x, 1), " m")
 base_cap <- paste0(
-  "by half-month period: 1906 (left), 2016-2025 (middle), and the difference 2016-2025 minus 1906 ",
-  "(right; only where both eras have a value, and coloured only where the change exceeds a threshold: ",
+  "by half-month period: 1906 (A, D), 2016-2025 (B, E), and the difference 2016-2025 minus 1906 ",
+  "(C, F; only where both eras have a value, and coloured only where the change exceeds a threshold: ",
   "temperature +/-1 deg C, DO +/-1.5 mg/L or +/-15 % sat -- Figure 2's values -- red/blue for warmer/cooler, ",
   "green/brown for more/less oxygen; all other cells very light grey). Note Figure 2 is a rate per decade, this is the total ",
   "change across ~110 years. Dashed vertical lines mark the start of each month; labels sit mid-month (the Nov label covers Nov 1-15 only). ",
@@ -207,8 +206,8 @@ write_captions(data.table(
   title=c("Lake Mendota temperature and dissolved oxygen (mg/L), 1906 vs. 2016-2025",
           "Lake Mendota temperature and dissolved oxygen (% saturation), 1906 vs. 2016-2025"),
   caption=c(
-    paste0("Water temperature (top row) and dissolved oxygen (mg/L, bottom row) ", base_cap),
-    paste0("Water temperature (top row) and dissolved oxygen (% saturation, bottom row) ", base_cap,
+    paste0("Water temperature (A-C) and dissolved oxygen (mg/L, D-F) ", base_cap),
+    paste0("Water temperature (A-C) and dissolved oxygen (% saturation, D-F) ", base_cap,
            " % saturation is computed identically for both eras from DO (mg/L) and water temperature: ",
            "Benson and Krause (1984) freshwater solubility with a barometric correction for Mendota's ",
            "elevation (258 m). For 1906, temperature at each oxygen cast comes from Plate I, interpolated in ",
