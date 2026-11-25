@@ -1,10 +1,10 @@
 ## FigureSX_hypsography.R: hypsographic curves for the 9 NTL lakes, from data/Bathymetry/lakehypsometry.csv
-## (the same file that weights depth bins by volume in Figure6_volatility.R panel b).
+## (the same file that weights depth bins by volume in figSX_volatility_volume.png, Figure6_volatility.R).
 ## lakehypsometry.csv gives hp_factor = fraction of lake volume per layer (each lake sums to 1); see the
 ## layer-convention note below. Area at a layer's mid-depth is proportional to hp_factor / layer thickness;
 ## it is scaled so the shallowest layer equals the lake's surface area (lake_characteristics.csv).
-##   (a) one panel per lake, absolute area (ha) vs depth
-##   (b) all lakes on relative axes (area / surface area vs depth / max depth), with a cone for reference
+##   (A) one panel per lake, absolute area (ha) vs depth
+##   (B) all lakes on relative axes (area / surface area vs depth / max depth), with a cone for reference
 ## (data/Bathymetry/lakemorphometry.csv is not used: it covers only the sampled basin of Allequash and Trout
 ##  and has no areas for Mendota or Monona.)
 suppressMessages({library(data.table); library(ggplot2); library(patchwork); library(ggrepel)})
@@ -56,7 +56,7 @@ pa <- ggplot(curve, aes(area_ha, depth_m, color=region)) +
   scale_y_reverse(expand=expansion(mult=c(0.02, 0.04))) +
   scale_x_continuous(expand=expansion(mult=c(0.02, 0.06)), limits=c(0, NA)) +
   scale_color_manual(values=regcol, name=NULL) +
-  labs(x="Area (ha)", y="Depth (m)", tag="a") + th
+  labs(x="Area (ha)", y="Depth (m)", tag="A") + th
 
 pb <- ggplot(curve, aes(rel_area, rel_depth, group=name, color=region)) +
   geom_line(data=data.table(rel_depth=seq(0,1,0.01))[, rel_area := (1-rel_depth)^2], aes(rel_area, rel_depth),
@@ -71,7 +71,7 @@ pb <- ggplot(curve, aes(rel_area, rel_depth, group=name, color=region)) +
   scale_x_continuous(limits=c(0, 1.3), breaks=seq(0,1,0.25)) +
   scale_color_manual(values=regcol, guide="none") +
   coord_cartesian(clip="off") +
-  labs(x="Area / surface area", y="Depth / maximum depth", tag="b") + th
+  labs(x="Area / surface area", y="Depth / maximum depth", tag="B") + th
 
 p <- pa + pb + plot_layout(widths=c(2.2, 1), guides="collect") & theme(legend.position="bottom")
 ggsave("figures/figSX_hypsography.png", p, width=6.5, height=4.8, dpi=500, bg="white")
@@ -88,8 +88,8 @@ write_captions(data.table(
   caption=paste0(
     "Lake area at depth, from layer volume fractions (0.25-1 m layers; data/Bathymetry/lakehypsometry.csv), with area ",
     "proportional to each layer's volume fraction divided by its thickness and scaled to the lake's surface area. ",
-    "(a) Absolute area (ha) for each lake, with surface area, mean and maximum depth. Northern lakes in green, ",
-    "southern in red. (b) All lakes on relative axes (area / surface area against depth / maximum depth); the dashed ",
+    "(A) Absolute area (ha) for each lake, with surface area, mean and maximum depth. Northern lakes in green, ",
+    "southern in red. (B) All lakes on relative axes (area / surface area against depth / maximum depth); the dashed ",
     "grey curve is a perfect cone, A/A0 = (1 - z/zmax)^2. Curves further right have relatively more deep area ",
     "(steep-sided basins); curves nearer the cone have most area in shallow water. The same volume fractions weight ",
-    "depth bins in Figure 6b.")))
+    "depth bins in the volume-weighted version of Figure 6 (Fig. SX).")))

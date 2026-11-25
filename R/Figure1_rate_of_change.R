@@ -1,9 +1,27 @@
-## Fig 12: RATE of change across depth x season, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
-## Companion to fig09, but instead of differencing two eras this fits a trend through the WHOLE
-## record: per cell, a Theil-Sen slope (per decade) with a Mann-Kendall significance test.
-## Why this exists: an era split (fig09) discards the time ordering -- a step change and a steady
-## ramp look identical -- and throws away the years in between. A Sen slope uses every year, is
-## robust to outliers (same motivation as the medians in fig09), and yields an interpretable RATE.
+## Paper Figure 2: RATE of change in temperature and dissolved oxygen across depth x season, for the
+## 9 NTL lakes (Fish Lake and Wingra excluded), in three groups: northern lakes with no clarity
+## change (Trout, Big Muskie, Sparkling, Allequash), northern lakes with a browning trend (Crystal,
+## Trout Bog, Crystal Bog), and southern lakes (Mendota, Monona); descending max depth within a group.
+## Input: data/profiles_clean.csv (from 02_clean_profiles.R): NTL-LTER profiles (EDI knb-lter-ntl.29)
+##   plus, for Mendota only, extra 2006-2019 MEMO casts (EDI knb-lter-ntl.415; NTL wins on shared
+##   days). Window Apr 1 - Nov 15; Crystal 2012-2013 excluded (whole-lake mixing experiment).
+##   Run Figure2_clarity_trends.R first (supplies the DOC/Secchi arrows beside each lake name).
+## Method, per lake x variable (wtemp, o2, o2sat):
+##   - each cast interpolated to depth bins (1 m; 0.5 m for lakes < 10 m deep) in half-month bins
+##   - DO < 0.5 mg/L floored to 0 (anoxic floor, below)
+##   - residuals from a median seasonal curve (quantile regression, ns df=6) per lake/var/depth
+##   - one median residual per year per cell; a cell needs >= 10 years and a >= 20-year span
+##   - Theil-Sen slope per decade, Mann-Kendall test, Benjamini-Hochberg FDR per lake
+##   - block version: the same test on depth blocks (5 m for lakes >= 10 m, 2 m for 5-10 m, 1 m
+##     below) within each half-month; significant blocks are outlined
+## A Sen slope uses every year (unlike a two-era difference, which cannot tell a step from a ramp),
+## is robust to outliers, and gives an interpretable RATE.
+## Outputs (figures/):
+##   fig01_rate_mgL.png, fig01_rate_sat.png              cell significance (hatched = not significant)
+##   fig01_rate_block_mgL.png, fig01_rate_block_sat.png  block significance (outlined = significant)
+##   fig01_cell_trends.csv, fig01_block_trends.csv       trend tables (read by Figure6_volatility.R)
+##   captions.csv                                         rows for each PNG (merge-written)
+## Set OUTDIR_OVERRIDE / BLK_DEEP_OVERRIDE before sourcing to write elsewhere / change block size.
 suppressMessages({library(data.table); library(ggplot2); library(scales); library(patchwork)
                   library(ggh4x); library(splines); library(quantreg); library(ggtext)})
 
@@ -37,7 +55,7 @@ ryrs <- merge(prof[, .(lakeid, year)], meta[, .(lakeid, region)], by = "lakeid")
   , .(lo = min(year), hi = max(year)), by = region]
 nyr <- ryrs[region == "Northern"]; syr <- ryrs[region == "Southern"]
 
-## long over the variables, interpolate each cast to depth bins (half-month bins, same as fig09).
+## long over the variables, interpolate each cast to depth bins, then assign half-month time bins.
 ## Bin width is 0.5 m for lakes under 10 m (zmax) and 1 m for deeper lakes -- at 0.5 m throughout,
 ## the deep lakes' water columns rendered far denser than the pattern actually resolves.
 zmax_lookup <- setNames(meta$zmax, meta$lakeid)
@@ -53,7 +71,7 @@ hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)  # A
 g[, bi:=findInterval(doy,hedges)]; g<-g[bi>=1 & bi<=length(hedges)-1]
 g[, `:=`(tbin=(hedges[bi]+hedges[bi+1])/2, twidth=hedges[bi+1]-hedges[bi])]
 
-## Seasonal detrending, exactly as in fig09 and for the same reason: within a half-month window the
+## Seasonal detrending: within a half-month window the
 ## days actually visited drift later/earlier over the record, and since temp & O2 change fast within
 ## a fortnight that drift alone can manufacture a trend. Fit one median (tau=0.5) seasonal curve per
 ## lake/var/depth across the whole Apr-Nov season, then trend the RESIDUALS from it.
@@ -74,7 +92,7 @@ g[, resid := {
 yr <- g[, .(v=median(resid)), by=.(lakeid,var,tbin,twidth,dbin,year)]
 
 ## Theil-Sen slope: median of all pairwise slopes. Mann-Kendall (Kendall tau) for significance --
-## the natural non-parametric partner to Sen, and the same pairing already used in fig08/fig11.
+## the natural non-parametric partner to Sen.
 MIN_YR_TREND <- 10   # distinct years required to fit a trend at all
 MIN_SPAN     <- 20   # ...spread over at least this many years, so it's a trend not a short burst
 sen <- function(y,x){ n<-length(y); if(n<3) return(NA_real_)
@@ -173,12 +191,19 @@ ncast <- prof[is.finite(wtemp) | is.finite(o2) | is.finite(o2sat), .(ncast=uniqu
 w <- merge(w, ncast, by="lakeid", all.x=TRUE)
 w[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span><br>%s<br><span style='font-size:5pt;color:#555555'>n = %s profiles</span>",
                         name, fifelse(is.na(lab_md), "", lab_md), format(ncast, big.mark=","))]
-ord <- unique(w[, .(name, striplab, region, zmax)])[order(region,-zmax)]$striplab
+## three panel groups: northern lakes split by clarity trend (the bogs and Crystal are browning),
+## then the southern lakes; within a group, lakes run by descending max depth
+GROUPS <- c(clear="A  Northern Forested Lakes (%d–%d): No clarity change",
+            brown="B  Northern Forested Lakes (%d–%d): Browning trend",
+            south="C  Southern Ag/Urban Lakes (%d–%d)")
+w[, grp := factor(fcase(lakeid %in% c("CR","TB","CB"), "brown", region == "Northern", "clear", default="south"),
+                  levels=names(GROUPS))]
+ord <- unique(w[, .(name, striplab, grp, zmax)])[order(grp,-zmax)]$striplab
 w[, strip := factor(striplab, levels=ord)]
 
 ## block outlines in plot coordinates: span of the cells actually drawn in each block
 bx <- w[, .(ymin=min(dbin)-dstep[1]/2, ymax=max(dbin)+dstep[1]/2),
-        by=.(lakeid, var, tbin, twidth, blk=blk_of(dbin, lakeid), strip, region, name, zmax)]
+        by=.(lakeid, var, tbin, twidth, blk=blk_of(dbin, lakeid), strip, region, grp, name, zmax)]
 bx <- merge(bx, bcell[, .(lakeid, var, tbin, blk, bslope, bq, bsig)], by=c("lakeid","var","tbin","blk"))
 fwrite(bx[, .(lakeid, name, var, tbin, depth_top=ymin, depth_bottom=ymax, slope=bslope, q=bq, sig=bsig)],
        "figures/fig01_block_trends.csv")
@@ -203,7 +228,7 @@ xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
 ## text sizes scaled down for the 6.5in-wide output (was 12in) so panel titles like
 ## "Northern Forested Lakes" fit without clipping
 th <- theme_minimal(base_size=6.5) + theme(
-  panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"),
+  panel.grid=element_blank(), panel.spacing=unit(0.25,"lines"), plot.margin=margin(1, 3, 1, 3),
   legend.position="bottom", legend.key.width=unit(0.5,"cm"), legend.key.height=unit(0.22,"cm"),
   legend.title=element_text(size=6.5), plot.title=element_text(face="bold",size=9.5),
   plot.subtitle=element_text(face="bold", size=6.5, color="grey30"),
@@ -211,13 +236,13 @@ th <- theme_minimal(base_size=6.5) + theme(
   axis.title.y=element_text(size=7.5),
   strip.text.y.right=element_markdown(angle=0, hjust=0, size=5, lineheight=1.2))
 
-block <- function(reg, vv, pal, right, ttl, sub, mode="cell"){
-  d <- w[region==reg & var==vv]
+block <- function(gg, vv, pal, right, ttl, sub, mode="cell"){
+  d <- w[grp==gg & var==vv]
   ggplot(d, aes(tbin,dbin,fill=slope)) +
     geom_tile(aes(width=twidth, height=dstep)) +
     { if(mode=="cell") geom_segment(data=hatch(d), aes(x=x,xend=xend,y=y,yend=yend), inherit.aes=FALSE,
                                     color="grey25", linewidth=0.16, alpha=0.5)
-      else geom_rect(data=bx[region==reg & var==vv & bsig==TRUE],
+      else geom_rect(data=bx[grp==gg & var==vv & bsig==TRUE],
                      aes(xmin=tbin-twidth/2, xmax=tbin+twidth/2, ymin=ymin, ymax=ymax),
                      inherit.aes=FALSE, fill=NA, color="black", linewidth=0.35) } +
     geom_vline(xintercept=mbound, color="white", linewidth=0.3, alpha=0.8) +
@@ -244,14 +269,22 @@ write_captions <- function(new_caps){
 }
 
 make_fig <- function(dovar, dopal, dolab, subtitle, outfile, mode="cell"){
-  NT <- block("Northern","wtemp", pal_T, FALSE, sprintf("Northern Forested Lakes (%d–%d)", nyr$lo, nyr$hi), "Trend in temperature", mode)
-  NO <- block("Northern", dovar,  dopal, TRUE,  " ", dolab, mode)
-  ST <- block("Southern","wtemp", pal_T, FALSE, sprintf("Southern Ag/Urban Lakes (%d–%d)", syr$lo, syr$hi), "Trend in temperature", mode)
-  SO <- block("Southern", dovar,  dopal, TRUE,  " ", dolab, mode)
-  left  <- (NT / ST) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
-  right <- (NO / SO) + plot_layout(heights=c(7,2.5), guides="collect") & theme(legend.position="bottom")
-  design <- (left | right) + plot_layout(guides="keep")
-  final <- wrap_elements(design)
+  yrs_of <- function(gg) if(gg == "south") syr else nyr
+  ## each group is a row: its title on a strip spanning both columns, then temperature (left) and
+  ## DO (right) panels; the column subtitles only on the top group
+  ttl_row <- function(txt) wrap_elements(full=grid::textGrob(txt, x=unit(0.02, "npc"), y=unit(0.2, "npc"), hjust=0, vjust=0,
+                 gp=grid::gpar(fontface="bold", fontsize=9.5))) & theme(plot.margin=margin(0, 0, 0, 0))
+  rows <- list(); hts <- c()
+  for(gg in names(GROUPS)){ y <- yrs_of(gg); top <- gg == names(GROUPS)[1]
+    rows <- c(rows, list(ttl_row(sprintf(GROUPS[[gg]], y$lo, y$hi)),
+      block(gg, "wtemp", pal_T, FALSE, NULL, if(top) "Trend in temperature" else NULL, mode),
+      block(gg, dovar,   dopal, TRUE,  NULL, if(top) dolab else NULL, mode)))
+    hts <- c(hts, 0.32, w[grp == gg, uniqueN(lakeid)] + if(top) 0.3 else 0) }  # panel height ~ lakes
+  lay <- paste(sprintf("%s%s\n%s%s", LETTERS[seq(1, 9, 3)], LETTERS[seq(1, 9, 3)],
+                       LETTERS[seq(2, 9, 3)], LETTERS[seq(3, 9, 3)]), collapse="\n")
+  design <- wrap_plots(rows, design=lay) + plot_layout(heights=hts, guides="collect") &
+    theme(legend.position="bottom")
+  final <- wrap_elements(design) + theme(plot.margin=margin(2, 2, 2, 2))
   ggsave(outfile, final, width=6.5, height=8, dpi=500, bg="white"); cat("wrote", outfile, "\n")
   captions[[outfile]] <<- data.table(file=outfile, title=FIG_TITLE, caption=subtitle)
 }

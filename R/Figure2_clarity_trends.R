@@ -27,7 +27,7 @@ SEASON  <- c(152, 273)  # Jun 1 - Sep 30, stratified season
 MIN_OBS <- 3            # a lake-year is plotted only if >=3 sampling DATES fall in the window
 
 ## Annual value = MEDIAN across sampling dates (not mean): robust to the odd bloom-day or
-## post-storm cast, consistent with the median-based treatment used in fig08/fig09/fig12.
+## post-storm cast, consistent with the per-year medians used in Figure1_rate_of_change.R.
 ## Counting DATES not rows matters -- DOC has several depths per sample, so a raw row count would
 ## let one visit satisfy the 3-observation threshold.
 annual <- function(d, min_obs=MIN_OBS)
@@ -72,7 +72,6 @@ kdyr <- robz(annual(kd[is.finite(v) & v>0]))
 
 ## ---------------- metric 2: DOC (mg/L), surface (0 m exactly), all 9 lakes ------------------------
 ## depth==0, NOT depth<=2: discrete sampled depths differ by lake, so <=2m is not like-for-like
-## (see fig08/fig12). Same change applied there.
 doc <- fread("data/chem_north.csv")[lakeid %in% meta$lakeid & doc>0 & doc<80 & depth==0 &
                                     (is.na(flagdoc) | flagdoc=="") &
                                     !(lakeid=="CR" & year4 %in% c(2012,2013))]
