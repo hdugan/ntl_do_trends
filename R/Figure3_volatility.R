@@ -1,16 +1,16 @@
-## Fig 6: which parts of the open-water season are changing most? A seasonal summary of Figure 2
-## (Figure1_rate_of_change.R), all 9 NTL lakes (Fish Lake and Wingra excluded).
-## Reads figures/fig01_cell_trends.csv and figures/fig01_block_trends.csv -- run Figure1_rate_of_change.R first.
+## Fig 3: which parts of the open-water season are changing most? A seasonal summary of Figure 2
+## (Figure2_rate_of_change.R), all 9 NTL lakes (Fish Lake and Wingra excluded).
+## Reads figures/fig02_cell_trends.csv and figures/fig02_block_trends.csv -- run Figure2_rate_of_change.R first.
 ##
 ## For each lake x half-month period, collapsing over depth:
 ##   tile fill = mean Theil-Sen slope across that lake's depth bins (signed; degC or mg/L per decade)
 ##   dot size  = % of that lake's depth bins lying in a SIGNIFICANT DEPTH BLOCK (the block test of the
-##               fig01_rate_block_*.png versions: BH q<0.05 per lake), so Figures 2 and 6 agree
+##               fig02_rate_block_*.png versions: BH q<0.05 per lake), so Figures 2 and 3 agree
 ## Top bars: that same %, split into significant INCREASING blocks (above 0) and DECREASING blocks
 ## (below 0), in each half-month, averaged across lakes so each lake counts equally (otherwise Trout,
 ## with the most depth bins, would dominate).
-## Two outputs: figures/fig06_volatility.png weights every depth bin equally (main figure);
-## figures/figSX_volatility_volume.png weights each depth bin by the lake AREA at that depth x bin thickness,
+## Two outputs: figures/fig03_volatility.png weights every depth bin equally (main figure);
+## figures/fig03_volatility_volume.png weights each depth bin by the lake AREA at that depth x bin thickness,
 ## i.e. the share of lake VOLUME it represents (data/Bathymetry/lakehypsometry.csv), so tiles become
 ## volume-weighted mean trends and dots the % of lake VOLUME in significant blocks (robustness check).
 ## Shallow, broad layers then count for more than the narrow deep hole.
@@ -18,17 +18,17 @@
 ## cooling in Sep-Oct give a pale tile) -- the dot still shows that the period is active.
 suppressMessages({library(data.table); library(ggplot2); library(patchwork); library(scales)})
 
-path <- "figures/fig01_cell_trends.csv"
-if(!file.exists(path)) stop(path, " not found -- run Figure1_rate_of_change.R first")
+path <- "figures/fig02_cell_trends.csv"
+if(!file.exists(path)) stop(path, " not found -- run Figure2_rate_of_change.R first")
 w <- fread(path)[var %in% c("wtemp","o2")]
-bpath <- "figures/fig01_block_trends.csv"
-if(!file.exists(bpath)) stop(bpath, " not found -- run Figure1_rate_of_change.R first")
+bpath <- "figures/fig02_block_trends.csv"
+if(!file.exists(bpath)) stop(bpath, " not found -- run Figure2_rate_of_change.R first")
 bk <- fread(bpath)[var %in% c("wtemp","o2")]
 ## each 1-m (0.5-m) cell inherits the significance of the depth block it sits in
 w[bk, on=.(lakeid, var, tbin, dbin >= depth_top, dbin <= depth_bottom), `:=`(bsig = i.sig, bslope = i.slope)]
 w[is.na(bsig), bsig := FALSE]
 
-## same three groups and order as Figure 2 (Figure1_rate_of_change.R): northern lakes with no clarity
+## same three groups and order as Figure 2 (Figure2_rate_of_change.R): northern lakes with no clarity
 ## change, northern lakes with a browning trend, southern lakes; descending max depth within a group
 w[, grp := factor(fcase(lakeid %in% c("CR","TB","CB"), "brown", region == "Northern", "clear", default="south"),
                   levels=c("clear","brown","south"))]
@@ -59,11 +59,11 @@ summ <- function(weighted){
   list(s=s, top=s[, .(pct=mean(pct), up=mean(up), down=mean(down)), by=.(var, tbin, twidth)])
 }
 A <- summ(FALSE); B <- summ(TRUE)
-for(z in list(list("Fig 6: each depth bin equal", A), list("Fig SX: weighted by lake volume", B))){
+for(z in list(list("Fig 3 (fig03_volatility): each depth bin equal", A), list("Fig 3 (fig03_volatility_volume): weighted by lake volume", B))){
   cat("\n", z[[1]], "-- % in significant increasing / decreasing blocks by half-month (mean across lakes):\n")
   print(dcast(z[[2]]$top[, .(var, tbin, v=sprintf("+%d/-%d", round(up), round(down)))], var ~ tbin, value.var="v")) }
 
-## month boundaries + tick centres, same convention as Figure1_rate_of_change.R
+## month boundaries + tick centres, same convention as Figure2_rate_of_change.R
 mbound <- c(91,121,152,182,213,244,274,305,320)
 xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
          labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"), limits=c(91,320), expand=c(0,0))
@@ -120,17 +120,17 @@ column <- function(vv, ttl, pal, left, S, sizename, tag=NULL){
   bars / tiles + plot_layout(heights=c(1,4))
 }
 ## two separate figures (same bar axis limits, so they can be compared directly):
-##   Figure 6           every depth bin weighted equally
-##   Figure SX          the same, weighted by lake volume (robustness check)
+##   fig03_volatility.png         every depth bin weighted equally
+##   fig03_volatility_volume.png  the same, weighted by lake volume
 save_fig <- function(S, ttl_T, ttl_O, sizename, outfile){
   p <- (column("wtemp", ttl_T, pal_T, TRUE, S, sizename) | column("o2", ttl_O, pal_O, FALSE, S, sizename)) +
     plot_layout(guides="collect") & theme(legend.position="bottom")
   p <- p + plot_annotation(theme=theme(plot.margin=margin(5, 14, 5, 5)))   # room for the 'Browning' label
   ggsave(outfile, p, width=6.5, height=4.9, dpi=500, bg="white"); cat("wrote", outfile, "\n")
 }
-save_fig(A, "Temperature", "Dissolved oxygen", "% of depth range\nin significant blocks", "figures/fig06_volatility.png")
+save_fig(A, "Temperature", "Dissolved oxygen", "% of depth range\nin significant blocks", "figures/fig03_volatility.png")
 save_fig(B, "Temperature, weighted by lake volume", "Dissolved oxygen, weighted by lake volume",
-         "% of lake volume\nin significant blocks", "figures/figSX_volatility_volume.png")
+         "% of lake volume\nin significant blocks", "figures/fig03_volatility_volume.png")
 
 ## Title + caption off the PNG, into the shared captions.csv (same convention as the other fig*.R)
 write_captions <- function(new_caps){
@@ -152,15 +152,15 @@ tail_txt <- paste0("Averaging over depth lets opposite trends cancel (e.g. surfa
   "Crystal Lake in September-October), so a pale tile with a large dot marks a period of change in both ",
   "directions. Crystal Lake 2012-2013 excluded (whole-lake mixing experiment).")
 write_captions(rbind(
-  data.table(file="figures/fig06_volatility.png",
+  data.table(file="figures/fig03_volatility.png",
     title="When in the open-water season temperature and oxygen are changing",
     caption=paste0(common,
       "Tiles: mean trend across all depth bins for each lake and half-month period (temperature in °C per ",
       "decade; dissolved oxygen in mg/L per decade), each depth bin weighted equally. Dots: percentage of that ",
       "lake's depth range ", dots, bars, tail_txt)),
-  data.table(file="figures/figSX_volatility_volume.png",
+  data.table(file="figures/fig03_volatility_volume.png",
     title="Seasonal summary of trends weighted by lake volume",
-    caption=paste0("As Figure 6, but with each depth bin weighted by its share of lake volume (lake area at ",
+    caption=paste0("As Figure 3, but with each depth bin weighted by its share of lake volume (lake area at ",
       "that depth times bin thickness, from layer volume fractions in lake hypsometry; Fig. SX hypsography), so ",
       "shallow, broad layers count for more than the narrow deep basin. ", common,
       "Tiles: volume-weighted mean trend for each lake and half-month period. Dots: percentage of lake volume ",

@@ -1,5 +1,5 @@
 ## FigureSX_hypsography.R: hypsographic curves for the 9 NTL lakes, from data/Bathymetry/lakehypsometry.csv
-## (the same file that weights depth bins by volume in figSX_volatility_volume.png, Figure6_volatility.R).
+## (the same file that weights depth bins by volume in fig03_volatility_volume.png, Figure3_volatility.R).
 ## lakehypsometry.csv gives hp_factor = fraction of lake volume per layer (each lake sums to 1); see the
 ## layer-convention note below. Area at a layer's mid-depth is proportional to hp_factor / layer thickness;
 ## it is scaled so the shallowest layer equals the lake's surface area (lake_characteristics.csv).
@@ -92,4 +92,4 @@ write_captions(data.table(
     "southern in red. (B) All lakes on relative axes (area / surface area against depth / maximum depth); the dashed ",
     "grey curve is a perfect cone, A/A0 = (1 - z/zmax)^2. Curves further right have relatively more deep area ",
     "(steep-sided basins); curves nearer the cone have most area in shallow water. The same volume fractions weight ",
-    "depth bins in the volume-weighted version of Figure 6 (Fig. SX).")))
+    "depth bins in the volume-weighted version of Figure 3.")))

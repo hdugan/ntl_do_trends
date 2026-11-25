@@ -1,15 +1,15 @@
-## FigureSD_thermocline.R: thermocline depth and center of buoyancy through the open-water season,
-## one panel per lake. Writes two figures: figSD_thermocline.png (rLakeAnalyzer::thermo.depth, depth of
-## the steepest density gradient) and figSD_centerbuoyancy.png (rLakeAnalyzer::center.buoyancy, the
+## FigureSX_thermocline.R: thermocline depth and center of buoyancy through the open-water season,
+## one panel per lake. Writes two figures: figSX_thermocline.png (rLakeAnalyzer::thermo.depth, depth of
+## the steepest density gradient) and figSX_centerbuoyancy.png (rLakeAnalyzer::center.buoyancy, the
 ## buoyancy-frequency-weighted mean depth -- smoother, ~20-40% less cast-to-cast noise in most lakes).
 ## Both metrics are computed per cast using the same eligibility rule as
-## TableS2_ZoneTrends.R / FigureSX_metalimnionwindow.R: the cast must have a resolved metalimnion
+## TableS2_ZoneTrends.R: the cast must have a resolved metalimnion
 ## (meta.depths top AND bottom) and be positively stratified (surface warmer than bottom); other
 ## casts have no thermocline. April 1-October 31, Crystal Lake 2012-2013 excluded.
 ## Each year is one thin line (day of year on x); colour = the four decade groups and palette of
-## Figure3_o2_profiles.R (1985-1995 blue, 1995-2005 green, 2005-2015 orange, 2015-2025 red). As in
-## Figure 3, years before 1985 (northern lakes 1981-1984) fall outside the groups and are not drawn.
-## Thick lines = each group's median thermocline depth by half-month period (Figure 1's bin edges).
+## FigureSX_o2_profiles.R (1985-1995 blue, 1995-2005 green, 2005-2015 orange, 2015-2025 red). As in
+## FigureSX_o2_profiles.R, years before 1985 (northern lakes 1981-1984) fall outside the groups and are not drawn.
+## Thick lines = each group's median thermocline depth by half-month period (Figure 2's bin edges).
 suppressMessages({library(data.table); library(ggplot2); library(rLakeAnalyzer)})
 
 meta <- data.table(
@@ -51,14 +51,14 @@ th[, strip := factor(name, levels=meta[order(region, -zmax), name])]
 setorder(th, lakeid, year, doy)
 
 metrics <- list(
-  list(col="thermo", file="figures/figSD_thermocline.png",    ylab="Thermocline depth (m)"),
-  list(col="cb",     file="figures/figSD_centerbuoyancy.png", ylab="Center of buoyancy (m)"))
+  list(col="thermo", file="figures/figSX_thermocline.png",    ylab="Thermocline depth (m)"),
+  list(col="cb",     file="figures/figSX_centerbuoyancy.png", ylab="Center of buoyancy (m)"))
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305)
 mbound <- c(91,121,152,182,213,244,274,305)
 th[, bi := findInterval(doy, hedges)]
 for (m in metrics) {
   d <- th[is.finite(get(m$col))][, val := get(m$col)]
-  ## era medians by half-month bin (Figure 1's edges), drawn at bin centres
+  ## era medians by half-month bin (Figure 2's edges), drawn at bin centres
   med <- d[bi >= 1 & bi < length(hedges), .(val=median(val), n=.N), by=.(strip, era, bi)][n >= 3]
   med[, doy := (hedges[bi] + hedges[bi + 1]) / 2]
   setorder(med, strip, era, doy)
@@ -92,12 +92,12 @@ common <- paste0(
   "A cast contributes only if its metalimnion top and bottom are both resolved (meta.depths) and it is ",
   "positively stratified (surface warmer than bottom) -- the same rule as Table S2. Thin lines are individual ",
   "years; thick lines are each decade group's median by half-month period (shown where at least 3 casts ",
-  "contribute). Colours follow Figure 3: 1985-1995 blue, 1995-2005 green, 2005-2015 orange, 2015-2025 red; ",
+  "contribute). Colours follow the August oxygen-profile figure (Fig. SX): 1985-1995 blue, 1995-2005 green, 2005-2015 orange, 2015-2025 red; ",
   "years before 1985 are not shown. Panels ordered north then south by max depth (zmax); each panel has its ",
   "own depth axis. Crystal Bog is not shown: at 2.5 m deep and 0.5 m sampling, its thermocline can only take ",
   "three values. Crystal Lake 2012-2013 excluded (whole-lake mixing experiment).")
 write_captions(data.table(
-  file=c("figures/figSD_thermocline.png", "figures/figSD_centerbuoyancy.png"),
+  file=c("figures/figSX_thermocline.png", "figures/figSX_centerbuoyancy.png"),
   title=c("Seasonal thermocline depth by decade", "Seasonal center of buoyancy by decade"),
   caption=c(
     paste("Thermocline depth (rLakeAnalyzer::thermo.depth; depth of the steepest density gradient) for each cast, April 1-October 31.", common),

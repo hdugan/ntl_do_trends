@@ -24,7 +24,7 @@ readr::write_csv(chars, "data/lake_characteristics.csv")
 cat("wrote data/lake_characteristics.csv (", package_id, ")\n")
 
 ## --- Restrict/order to the 11 primary study lakes, same meta + ordering convention (region,
-## then descending max depth) used in Figure1_rate_of_change.R and Figure2_clarity_trends.R ---
+## then descending max depth) used in Figure2_rate_of_change.R and FigureSX_clarity_trends.R ---
 meta <- data.table(
   lakeid = c("TR", "BM", "CR", "SP", "AL", "TB", "CB", "ME", "MO", "FI", "WI"),
   waterbody_name = c(

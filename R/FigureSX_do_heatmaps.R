@@ -1,4 +1,4 @@
-## Figs 8/9 with per-tile change outlines + %-saturation versions.
+## Fig SX: DO depth x season heatmaps with per-tile change outlines + %-saturation versions.
 ## Outline a tile YELLOW if DO significantly DECREASED vs the previous era, RED if it INCREASED (t-test p<0.05).
 suppressMessages({library(data.table); library(ggplot2); library(scales)})
 

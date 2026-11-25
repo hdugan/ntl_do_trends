@@ -6,7 +6,7 @@
 ##       not mistaken for a bottom reading
 ## Spread = 5th-95th percentile range (degC) across all profiles in that lake x month, full record.
 ## April-November; Crystal Lake 2012-2013 excluded (whole-lake mixing experiment).
-## Lakes in the same order as Figures 2 and 6 (northern no-clarity-change, northern browning, southern;
+## Lakes in the same order as Figures 2 and 3 (northern no-clarity-change, northern browning, southern;
 ## descending max depth within a group).
 ## (Replaces FigureSX_surface_temp_spread.R and FigureSX_bottom_temp.R.)
 suppressMessages({library(data.table); library(ggplot2); library(patchwork)})

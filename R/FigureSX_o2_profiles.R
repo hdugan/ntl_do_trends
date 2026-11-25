@@ -1,4 +1,4 @@
-## Fig 3: August DO (% saturation) profile by decade, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
+## Fig SX: August DO (% saturation) profile by decade, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
 ## Four August MEDIAN profiles per lake -- 1985-1995, 1995-2005, 2005-2015, 2015-2025 -- overlaid
 ## on one panel per lake, coloured blue (earliest) -> green -> orange -> red (most recent) so a
 ## profile sliding right/left/up/down across the four lines reads as a multi-decade progression,
@@ -11,7 +11,7 @@
 ## Birge, E.A. (1932), Trans. Wis. Acad. Sci. Arts Lett. 27: 415-486 (data/Juday/Juday_1928.csv,
 ## digitized by hand -- one cast per lake, 1928-08-21/25) -- see the conversion block below.
 ##
-## Also writes a second figure, fig03_o2_profiles_leveladjusted.png: the same decade-median
+## Also writes a second figure, figSX_o2_profiles_leveladjusted.png: the same decade-median
 ## approach for just Crystal/Sparkling/Big Muskellunge, but with each cast's depth adjusted for
 ## that day's lake level (EDI 30) before pooling -- see the block near the end of this script.
 suppressMessages({library(data.table); library(ggplot2); library(ggtext); library(patchwork)})
@@ -42,7 +42,7 @@ p <- p[!is.na(era)]
 p[, era := factor(era, levels=lv)]
 
 ## MEDIAN across casts (not mean): robust to the odd bloom-day or post-storm cast, same treatment
-## used throughout this project (Figure1/Figure2). Depth rounded to the nearest metre first so
+## used throughout this project (Figure2_rate_of_change.R, FigureSX_clarity_trends.R). Depth rounded to the nearest metre first so
 ## casts at slightly different depths pool into one profile.
 do <- p[, .(o2sat=median(o2sat)), by=.(lakeid, era, depth=round(depth))]
 do <- merge(do, meta, by="lakeid")
@@ -84,7 +84,7 @@ juday28[, era := factor(era, levels=lv)]
 do <- rbind(do, juday28)
 setorder(do, lakeid, era, depth)   # geom_path joins in row order; guard against merge re-sorting
 
-## panel titles: lake name (bold) + region tag, same convention as Figure2_clarity_trends.R
+## panel titles: lake name (bold) + region tag, same convention as FigureSX_clarity_trends.R
 meta[, striplab := sprintf("<span style='font-size:7pt;font-weight:bold'>%s</span> (%s)",
                             name, tolower(region))]
 striplabs <- setNames(meta$striplab, meta$lakeid)
@@ -147,11 +147,11 @@ grid <- wrap_plots(panels, ncol=4, nrow=3)
 design <- grid / wrap_elements(full=legend_grob) + plot_layout(heights=c(1,0.08))
 design <- design + plot_annotation(caption="Dissolved oxygen (% sat)",
   theme=theme(plot.caption=element_text(hjust=0.5, size=7.5, margin=margin(t=2))))
-ggsave("figures/fig03_o2_profiles.png", design, width=6.5, height=6, dpi=500, bg="white")
-cat("wrote figures/fig03_o2_profiles.png\n")
+ggsave("figures/figSX_o2_profiles.png", design, width=6.5, height=6, dpi=500, bg="white")
+cat("wrote figures/figSX_o2_profiles.png\n")
 
 ## Title + long explanatory paragraph are NOT drawn on the PNG -- written to the shared
-## figures/captions.csv instead (see Figure1_rate_of_change.R for the same convention).
+## figures/captions.csv instead (see Figure2_rate_of_change.R for the same convention).
 write_captions <- function(new_caps){
   path <- "figures/captions.csv"
   old <- if(file.exists(path)) fread(path) else data.table(file=character(),title=character(),caption=character())
@@ -174,7 +174,7 @@ caption <- paste0(
   "freshwater solubility equation with a standard barometric pressure correction for each lake's own ",
   "elevation -- validated to reproduce the modern record's own o2/o2sat relationship for these two ",
   "lakes to within 0.1%. A single cast, not a multi-year median like the other four lines.")
-write_captions(data.table(file="figures/fig03_o2_profiles.png",
+write_captions(data.table(file="figures/figSX_o2_profiles.png",
   title="August dissolved-oxygen profiles by decade", caption=caption))
 
 ## ============================================================================================
@@ -224,17 +224,17 @@ g3 <- ggplot(do3, aes(o2sat, depth, color=era)) +
   labs(x="Dissolved oxygen (% sat)", y="Depth below long-term median lake level (m)") +
   th + theme(legend.position="bottom", plot.title=element_blank(),
              strip.text=element_markdown(size=5.5, lineheight=1.2))
-ggsave("figures/fig03_o2_profiles_leveladjusted.png", g3, width=6.5, height=2.7, dpi=500, bg="white")
-cat("wrote figures/fig03_o2_profiles_leveladjusted.png\n")
+ggsave("figures/figSX_o2_profiles_leveladjusted.png", g3, width=6.5, height=2.7, dpi=500, bg="white")
+cat("wrote figures/figSX_o2_profiles_leveladjusted.png\n")
 
 caption3 <- paste0(
   "August DO (% sat) depth profile, Crystal/Sparkling/Big Muskellunge only, same four decade ",
-  "medians as fig03_o2_profiles.png but with depth adjusted for lake-level change before pooling: ",
+  "medians as figSX_o2_profiles.png but with depth adjusted for lake-level change before pooling: ",
   "each cast's depth is shifted by (that day's interpolated lake level minus the lake's own ",
   "median level over the full 1981-2025 record), so depth reads as distance below the long-term ",
   "average surface rather than below whatever the surface happened to be that day. These three are ",
   "unconfined seepage lakes with multi-metre level swings (BM ~2.1 m, CR ~2.0 m, SP ~1.75 m range) ",
   "driven by regional groundwater/climate; lake level is interpolated linearly to each cast date ",
   "from data/lake_levels.csv (EDI 30), between the two nearest survey dates.")
-write_captions(data.table(file="figures/fig03_o2_profiles_leveladjusted.png",
+write_captions(data.table(file="figures/figSX_o2_profiles_leveladjusted.png",
   title="Level-adjusted August DO profiles: Crystal, Sparkling, Big Muskellunge", caption=caption3))

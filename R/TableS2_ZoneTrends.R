@@ -1,6 +1,6 @@
 ## TableS2_ZoneTrends.R: significance-tested trends by THERMAL ZONE instead of fixed depth bins.
 ##
-## Why: Figure1_rate_of_change.R tests trends in ~14k fine depth x half-month cells. Individually
+## Why: Figure2_rate_of_change.R tests trends in ~14k fine depth x half-month cells. Individually
 ## those cells are weakly powered (most real trends don't clear even raw p<0.05 at that
 ## resolution) even though the pattern is visually obvious and spatially coherent -- because a
 ## fixed "surface <=2m / deep >=60% zmax" split doesn't track what's physically happening: lakes
@@ -31,7 +31,7 @@ meta <- data.table(
 
 prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
-prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # same window as Figure1
+prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # same window as Figure2_rate_of_change.R
 
 ## ---- 1. Per-cast thermal structure, from the temperature profile alone -------------------------
 ## SPRING_FALL_SPLIT_DOY divides "Mixed" casts into Spring Mixing vs Fall Turnover. 200 = ~Jul 19,
@@ -90,7 +90,7 @@ pm[, zone := zone_of(lakeid, depth, meta_top, meta_bot, doy, inverse)]
 zone_levels <- c("Spring Mixing","Epilimnion","Metalimnion","Hypolimnion","Fall Turnover")
 pm[, zone := factor(zone, levels=zone_levels)]
 
-## ---- 3. Seasonal detrending within each zone, same rationale as Figure1: the exact days visited
+## ---- 3. Seasonal detrending within each zone, same rationale as Figure2_rate_of_change.R: the exact days visited
 ## drift year to year, and since values change fast seasonally that drift alone can manufacture a
 ## trend. Fit one median seasonal curve per lake/var/zone, trend the RESIDUALS.
 pm[, resid := {
@@ -107,7 +107,7 @@ pm[, resid := {
 ## year doesn't get more weight than a sparsely-sampled one
 yr <- pm[, .(v=median(resid)), by=.(lakeid,var,zone,year)]
 
-## ---- 4. Theil-Sen slope (per decade) + Mann-Kendall significance, same estimators as Figure1 ---
+## ---- 4. Theil-Sen slope (per decade) + Mann-Kendall significance, same estimators as Figure2_rate_of_change.R ---
 MIN_YR_TREND <- 10
 MIN_SPAN     <- 20
 sen <- function(y,x){ n<-length(y); if(n<3) return(NA_real_)
@@ -121,7 +121,7 @@ cell <- yr[, { n<-.N; sp<- if(n>0) diff(range(year)) else 0
   } else .(slope=NA_real_, p=NA_real_, nyr=n) },
   by=.(lakeid,var,zone)]
 
-## Benjamini-Hochberg FDR correction, per lake -- same convention as Figure1, but the family here
+## Benjamini-Hochberg FDR correction, per lake -- same convention as Figure2_rate_of_change.R, but the family here
 ## is only ~5 zones x 3 variables = <=15 tests per lake (vs ~14k across the whole fine grid), so
 ## correction costs far less power: pooling to physically real zones is what actually fixes the
 ## "everything looks non-significant" problem, not the correction method.

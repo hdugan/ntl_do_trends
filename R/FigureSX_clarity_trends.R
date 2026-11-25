@@ -1,4 +1,4 @@
-## Fig 2: standardized water-clarity trends, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 1 (DOC), 29 (light/PAR),
+## Fig SX: standardized water-clarity trends, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 1 (DOC), 29 (light/PAR),
 ## 31 (Secchi).
 ## THREE independently-measured views of clarity for the 7 NORTHERN lakes (they cross-validate
 ## each other), but only TWO for the 2 SOUTHERN lakes:
@@ -27,7 +27,7 @@ SEASON  <- c(152, 273)  # Jun 1 - Sep 30, stratified season
 MIN_OBS <- 3            # a lake-year is plotted only if >=3 sampling DATES fall in the window
 
 ## Annual value = MEDIAN across sampling dates (not mean): robust to the odd bloom-day or
-## post-storm cast, consistent with the per-year medians used in Figure1_rate_of_change.R.
+## post-storm cast, consistent with the per-year medians used in Figure2_rate_of_change.R.
 ## Counting DATES not rows matters -- DOC has several depths per sample, so a raw row count would
 ## let one visit satisfy the 3-observation threshold.
 annual <- function(d, min_obs=MIN_OBS)
@@ -115,8 +115,8 @@ tbl <- fits[meta, on="lakeid", nomatch=0][
   , .(lakeid, name, region, metric, slope_mad_per_decade=round(slope,3), p=round(p,4),
       sig=!is.na(p) & p<0.05, nyr)]
 setorder(tbl, region, name, metric)
-fwrite(tbl, "figures/fig02_trends_table.csv")
-cat("wrote figures/fig02_trends_table.csv\n")
+fwrite(tbl, "figures/figSX_clarity_trends_table.csv")
+cat("wrote figures/figSX_clarity_trends_table.csv\n")
 print(tbl, nrows=100)
 
 ## ---------------- strip labels: 3 metrics for northern, 2 for southern lakes -----------------------
@@ -127,7 +127,7 @@ fw[, striplab_s := sprintf(
       "<span style='font-size:7pt;font-weight:bold'>%s</span> (southern)<br>DOC %+.2f%s &middot; Secchi %+.2f%s",
       name, slope_DOC, star(p_DOC), slope_Secchi, star(p_Secchi))]
 fw[, striplab := fifelse(region=="Northern", striplab_n, striplab_s)]
-ord <- fw[order(region, -zmax), striplab]  # same lake order as Figure1_rate_of_change.R
+ord <- fw[order(region, -zmax), striplab]  # same lake order as Figure2_rate_of_change.R
 fw[, strip := factor(striplab, levels=ord)]
 dat <- merge(dat, fw[,.(lakeid,strip,region)], by="lakeid")
 
@@ -162,11 +162,11 @@ g <- ggplot(dat, aes(year, darkness, color=metric)) +
   scale_linetype_manual(values=c(`TRUE`="solid",`FALSE`="22"), guide="none") +
   labs(x=NULL, y="Clarity anomaly (MAD from lake median) — up = darker") +
   th
-ggsave("figures/fig02_clarity_trends.png", g, width=6.5, height=6, dpi=500, bg="white")
-cat("wrote figures/fig02_clarity_trends.png\n")
+ggsave("figures/figSX_clarity_trends.png", g, width=6.5, height=6, dpi=500, bg="white")
+cat("wrote figures/figSX_clarity_trends.png\n")
 
 ## Title + long explanatory paragraph are NOT drawn on the PNG -- written to the shared
-## figures/captions.csv instead (see Figure1_rate_of_change.R for the same convention).
+## figures/captions.csv instead (see Figure2_rate_of_change.R for the same convention).
 write_captions <- function(new_caps){
   path <- "figures/captions.csv"
   old <- if(file.exists(path)) fread(path) else data.table(file=character(),title=character(),caption=character())
@@ -180,6 +180,6 @@ caption <- paste0(
   "(secview). Southern lakes (2): DOC and Secchi (secnview) only -- southern PAR profiles only start in 2019 (too short to trend).\n",
   "Each point is the annual MEDIAN across sampling dates; lake-years with <3 sampling dates are dropped.\n",
   "Solid trend = significant (Theil-Sen slope / Mann-Kendall p<0.05); dashed = not significant. Labels: slope in MAD/decade (*<0.05 **<0.01 ***<0.001). ",
-  "Crystal 2012-13 excluded (whole-lake mixing experiment). Surface DOC from 2 to 15 June 2023 is excluded as bad data (implausibly high values in the southern lakes). Full trend table with p-values: figures/fig02_trends_table.csv.")
-write_captions(data.table(file="figures/fig02_clarity_trends.png",
+  "Crystal 2012-13 excluded (whole-lake mixing experiment). Surface DOC from 2 to 15 June 2023 is excluded as bad data (implausibly high values in the southern lakes). Full trend table with p-values: figures/figSX_clarity_trends_table.csv.")
+write_captions(data.table(file="figures/figSX_clarity_trends.png",
   title="Standardized water-clarity trends across Wisconsin's lakes", caption=caption))

@@ -5,7 +5,7 @@
 ## Input: data/profiles_clean.csv (from 02_clean_profiles.R): NTL-LTER profiles (EDI knb-lter-ntl.29)
 ##   plus, for Mendota only, extra 2006-2019 MEMO casts (EDI knb-lter-ntl.415; NTL wins on shared
 ##   days). Window Apr 1 - Nov 15; Crystal 2012-2013 excluded (whole-lake mixing experiment).
-##   Run Figure2_clarity_trends.R first (supplies the DOC/Secchi arrows beside each lake name).
+##   Run FigureSX_clarity_trends.R first (supplies the DOC/Secchi arrows beside each lake name).
 ## Method, per lake x variable (wtemp, o2, o2sat):
 ##   - each cast interpolated to depth bins (1 m; 0.5 m for lakes < 10 m deep) in half-month bins
 ##   - DO < 0.5 mg/L floored to 0 (anoxic floor, below)
@@ -17,9 +17,9 @@
 ## A Sen slope uses every year (unlike a two-era difference, which cannot tell a step from a ramp),
 ## is robust to outliers, and gives an interpretable RATE.
 ## Outputs (figures/):
-##   fig01_rate_mgL.png, fig01_rate_sat.png              cell significance (hatched = not significant)
-##   fig01_rate_block_mgL.png, fig01_rate_block_sat.png  block significance (outlined = significant)
-##   fig01_cell_trends.csv, fig01_block_trends.csv       trend tables (read by Figure6_volatility.R)
+##   fig02_rate_mgL.png, fig02_rate_sat.png              cell significance (hatched = not significant)
+##   fig02_rate_block_mgL.png, fig02_rate_block_sat.png  block significance (outlined = significant)
+##   fig02_cell_trends.csv, fig02_block_trends.csv       trend tables (read by Figure3_volatility.R)
 ##   captions.csv                                         rows for each PNG (merge-written)
 ## Set OUTDIR_OVERRIDE / BLK_DEEP_OVERRIDE before sourcing to write elsewhere / change block size.
 suppressMessages({library(data.table); library(ggplot2); library(scales); library(patchwork)
@@ -115,7 +115,7 @@ cell <- yr[, { n<-.N; sp<- if(n>0) diff(range(year)) else 0
 ## proportion instead, the standard fix for many correlated tests shown as a significance grid.
 cell[!is.na(p), q := p.adjust(p, method="BH"), by=lakeid]
 
-## ---- BLOCK significance (for the fig01_rate_block_*.png versions) ------------------------------
+## ---- BLOCK significance (for the fig02_rate_block_*.png versions) ------------------------------
 ## Colours stay the per-cell trends; significance is instead tested on depth BLOCKS within each
 ## half-month: each year's block value is the mean of its depth cells' yearly residuals, then
 ## Sen + Mann-Kendall, BH FDR per lake across all its block tests (all variables), as for cells.
@@ -154,21 +154,21 @@ w <- merge(w, meta, by="lakeid")
 w[, dstep := fifelse(zmax<10, 0.5, 1)]  # matches the depth-bin width used to build dbin above
 
 ## Per-cell trend table: one source of truth for anything summarising this figure
-## (Figure6_volatility.R reads it rather than re-fitting).
+## (Figure3_volatility.R reads it rather than re-fitting).
 fwrite(w[, .(lakeid, name, region, zmax, var, tbin, twidth, dbin, dstep, slope, p, q, sig, nyr)],
-       "figures/fig01_cell_trends.csv")
-cat("wrote figures/fig01_cell_trends.csv\n")
+       "figures/fig02_cell_trends.csv")
+cat("wrote figures/fig02_cell_trends.csv\n")
 
 ## ---- context arrows beside each lake name: surface DOC trend and Secchi trend -----------------
-## Pulled from figures/fig02_trends_table.csv (written by Figure2_clarity_trends.R) instead of
+## Pulled from figures/figSX_clarity_trends_table.csv (written by FigureSX_clarity_trends.R) instead of
 ## re-fit here -- one source of truth for the DOC/Secchi trend, not two slightly-different fits.
-## NOTE this changes the window from this figure's own Apr-mid Nov to fig02's June-Sept
-## (stratified season), and Secchi source from secnview-for-all-11 to fig02's region split
-## (secview north, secnview south) -- run Figure2_clarity_trends.R before this script.
-trends_path <- "figures/fig02_trends_table.csv"
-if(!file.exists(trends_path)) stop("figures/fig02_trends_table.csv not found -- run Figure2_clarity_trends.R first")
+## NOTE this changes the window from this figure's own Apr-mid Nov to the clarity figure's June-Sept
+## (stratified season), and Secchi source from secnview-for-all-11 to the clarity figure's region split
+## (secview north, secnview south) -- run FigureSX_clarity_trends.R before this script.
+trends_path <- "figures/figSX_clarity_trends_table.csv"
+if(!file.exists(trends_path)) stop("figures/figSX_clarity_trends_table.csv not found -- run FigureSX_clarity_trends.R first")
 t2 <- fread(trends_path)[metric %in% c("DOC","Secchi")]
-## fig02's slope is a DARKNESS-oriented z-score (sign-flipped for Secchi so + = darker); un-flip
+## The clarity table's slope is a DARKNESS-oriented z-score (sign-flipped for Secchi so + = darker); un-flip
 ## Secchi back to its own raw direction (+ = deeper/clearer) to match this figure's "up = that
 ## variable increased" glyph convention. DOC needs no flip (raw direction already = darker).
 t2[, raw_slope := fifelse(metric=="Secchi", -slope_mad_per_decade, slope_mad_per_decade)]
@@ -206,7 +206,7 @@ bx <- w[, .(ymin=min(dbin)-dstep[1]/2, ymax=max(dbin)+dstep[1]/2),
         by=.(lakeid, var, tbin, twidth, blk=blk_of(dbin, lakeid), strip, region, grp, name, zmax)]
 bx <- merge(bx, bcell[, .(lakeid, var, tbin, blk, bslope, bq, bsig)], by=c("lakeid","var","tbin","blk"))
 fwrite(bx[, .(lakeid, name, var, tbin, depth_top=ymin, depth_bottom=ymax, slope=bslope, q=bq, sig=bsig)],
-       "figures/fig01_block_trends.csv")
+       "figures/fig02_block_trends.csv")
 
 ## Non-significant cells get a light diagonal stroke (one per tile). This is deliberately a plain
 ## geom_segment rather than ggpattern: ggpattern rasterizes every tile separately and takes many
@@ -293,9 +293,9 @@ yrs <- range(prof$year)
 base <- sprintf("April–mid-November. Theil-Sen slope per DECADE over the full %d–%d record (not a two-era difference): every year contributes, so a steady ramp and a step change are no longer confounded.\nCells are hatched where the trend is NOT significant after Benjamini-Hochberg FDR correction (per lake, across all its depth/time/variable cells; Mann-Kendall q<0.05); plain cells are significant. Blank = fewer than %d years or <%d-year span, too little to fit a trend.\nValues are trends in the seasonally-detrended residual, so drift in which days of a fortnight got sampled cannot masquerade as a trend. DO below 0.5 mg/L is set to 0 (anoxic) so that drift in near-zero sensor readings cannot either.\nBeside each lake name: n = number of profiles used, and full-record trend in surface DOC and in Secchi depth over the same window — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05).",
    yrs[1], yrs[2], MIN_YR_TREND, MIN_SPAN)
 make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)",
-  paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig01_rate_mgL.png")
+  paste0(base, "\nOxygen trends are strongly skewed negative — deep water is losing O₂ across nearly every lake, while surface/metalimnetic waters hold steadier."), "figures/fig02_rate_mgL.png")
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)",
-  paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig01_rate_sat.png")
+  paste0(base, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."), "figures/fig02_rate_sat.png")
 
 ## block-significance versions: same colours, boxes around significant depth blocks instead of hatching
 OUTDIR <- if(exists("OUTDIR_OVERRIDE")) OUTDIR_OVERRIDE else "figures"
@@ -305,9 +305,9 @@ bbase <- sprintf(paste0("April–mid-November. Colours: Theil-Sen slope per DECA
   "across all its block tests); significant blocks are outlined in black. Blank = fewer than %d years or <%d-year span.\n",
   "Beside each lake name: n = number of profiles used, and full-record trend in surface DOC and in Secchi depth — brown ↑ rising, blue ↓ falling, grey ✕ no significant trend (Mann-Kendall p<0.05)."),
   yrs[1], yrs[2], BLK_DEEP, MIN_YR_TREND, MIN_SPAN)
-make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)", bbase, file.path(OUTDIR, "fig01_rate_block_mgL.png"), mode="block")
+make_fig("o2",    pal_O,    "Trend in dissolved oxygen (mg/L)", bbase, file.path(OUTDIR, "fig02_rate_block_mgL.png"), mode="block")
 make_fig("o2sat", pal_Osat, "Trend in dissolved oxygen (% sat)", paste0(bbase, "\nAs % saturation: warming lowers O₂ solubility, so the same mg/L loss reads as a larger saturation deficit in deep water."),
-         file.path(OUTDIR, "fig01_rate_block_sat.png"), mode="block")
+         file.path(OUTDIR, "fig02_rate_block_sat.png"), mode="block")
 cat("\n=== % of drawn area in significant blocks, by lake & variable ===\n")
 print(dcast(bx[, .(pct=round(100*mean(bsig))), by=.(name, var)], name ~ var, value.var="pct"))
 

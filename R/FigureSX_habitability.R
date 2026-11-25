@@ -1,5 +1,5 @@
-## Fig 5: habitability status by depth window x half-month period, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
-## For each lake x depth bin x half-month period (same Apr1-Nov16 edges as Figure1_rate_of_change.R),
+## Fig SX: habitability status by depth window x half-month period, all 9 NTL lakes (Fish Lake and Wingra excluded). Data: EDI 29.
+## For each lake x depth bin x half-month period (same Apr1-Nov16 edges as Figure2_rate_of_change.R),
 ## compares median DO (mg/L) in two eras -- baseline (pre-2016) vs recent (2016-2025) -- against the
 ## 3 mg/L cold/coolwater-fish habitat threshold, and classifies the transition into one of four states:
 ##   remained  < 3 mg/L : chronically hypoxic, unhabitable in both eras
@@ -27,10 +27,10 @@ ERA_BREAK <- 2016        # same baseline/recent split used elsewhere in this rep
 
 prof <- fread("data/profiles_clean.csv")[lakeid %in% meta$lakeid & !is.na(o2)]
 prof[, `:=`(date=as.Date(sampledate), doy=yday(as.Date(sampledate)), year=year4)]
-prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15, same window as Figure1
+prof <- prof[doy>=91 & doy<=319 & !(lakeid=="CR" & year %in% c(2012,2013))]  # Apr 1 - Nov 15, same window as Figure2_rate_of_change.R
 
 ## interpolate each cast to a depth grid: 0.5 m for lakes <10 m zmax, 1 m for deeper lakes --
-## same rule used in Figure1_rate_of_change.R, so a "depth window" here means the same thing it
+## same rule used in Figure2_rate_of_change.R, so a "depth window" here means the same thing it
 ## does there
 g <- prof[, { o<-order(depth); dd<-depth[o]; yy<-o2[o]
   dstep <- if(zmax_lookup[[lakeid]] < 10) 0.5 else 1
@@ -38,7 +38,7 @@ g <- prof[, { o<-order(depth); dd<-depth[o]; yy<-o2[o]
     .(dbin=zg, dstep=dstep, val=approx(dd,yy,zg,rule=2,ties=mean)$y) } else .(dbin=numeric(0),dstep=numeric(0),val=numeric(0)) },
   by=.(lakeid, date, year, doy)]
 
-## half-month bins, identical edges to Figure1_rate_of_change.R (Apr 1 - Nov 16)
+## half-month bins, identical edges to Figure2_rate_of_change.R (Apr 1 - Nov 16)
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)
 g[, bi := findInterval(doy, hedges)]; g <- g[bi>=1 & bi<=length(hedges)-1]
 g[, `:=`(tbin=(hedges[bi]+hedges[bi+1])/2, twidth=hedges[bi+1]-hedges[bi])]
@@ -47,7 +47,7 @@ g[, era := fifelse(year < ERA_BREAK, "baseline", "recent")]
 
 ## per lake x depth bin x half-month bin x era: median DO and how many distinct years back it.
 ## Median of per-YEAR medians (not of all casts pooled), so a year sampled twice in a half-month
-## window doesn't get double weight -- same rule as Figure1_rate_of_change.R / Figure2.
+## window doesn't get double weight -- same rule as Figure2_rate_of_change.R / FigureSX_clarity_trends.R.
 yrm <- g[, .(v=median(val)), by=.(lakeid, dbin, dstep, tbin, twidth, era, year)]
 agg <- yrm[, .(med=median(v), n_yr=.N), by=.(lakeid, dbin, dstep, tbin, twidth, era)]
 agg[, below := med < HYPOXIA_THRESHOLD]
@@ -74,7 +74,7 @@ pal <- c("Remained < 3 mg/L (chronically hypoxic)"="#7f0000",
          "Became ≥ 3 mg/L (newly oxygenated)" ="#1a9850",
          "Remained ≥ 3 mg/L (oxygenated)"     ="#2166ac")
 
-## month boundaries + tick centres, same convention as Figure1_rate_of_change.R
+## month boundaries + tick centres, same convention as Figure2_rate_of_change.R
 mbound <- c(91,121,152,182,213,244,274,305,320)
 xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
                           labels=c("Apr","May","Jun","Jul","Aug","Sep","Oct","Nov"),
@@ -94,8 +94,8 @@ g_plot <- ggplot(wide, aes(x=tbin, y=dbin, fill=state)) +
         legend.text=element_text(size=6), axis.text=element_text(size=5.5),
         strip.text=element_text(face="bold", size=7), panel.spacing=unit(0.5,"lines"))
 
-ggsave("figures/fig05_habitability.png", g_plot, width=6.5, height=5.6, dpi=500, bg="white")
-cat("wrote figures/fig05_habitability.png\n")
+ggsave("figures/figSX_habitability.png", g_plot, width=6.5, height=5.6, dpi=500, bg="white")
+cat("wrote figures/figSX_habitability.png\n")
 
 ## Title + caption off the PNG, into the shared captions.csv (same convention as the other fig*.R)
 write_captions <- function(new_caps) {
@@ -105,12 +105,12 @@ write_captions <- function(new_caps) {
   cat("wrote", path, "\n")
 }
 write_captions(data.table(
-  file="figures/fig05_habitability.png",
+  file="figures/figSX_habitability.png",
   title="Habitability by depth and half-month period: dissolved oxygen, baseline vs. recent",
   caption=paste0(
     "For each lake, depth window (0.5 m bins for lakes under 10 m zmax, 1 m otherwise -- same ",
-    "rule as Figure1_rate_of_change.R), and half-month period (April 1-November 15, same bin edges ",
-    "as Figure1_rate_of_change.R), median dissolved oxygen (mg/L) ",
+    "rule as Figure2_rate_of_change.R), and half-month period (April 1-November 15, same bin edges ",
+    "as Figure2_rate_of_change.R), median dissolved oxygen (mg/L) ",
     "(median of yearly medians) is compared between a baseline era (pre-2016) and a recent era (2016-2025), against a 3 mg/L ",
     "cold/coolwater-fish habitat threshold. Dark red = remained below 3 mg/L in both eras ",
     "(chronically hypoxic); orange = crossed from at-or-above to below 3 mg/L (newly hypoxic, lost ",

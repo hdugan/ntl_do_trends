@@ -51,3 +51,19 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Stetler et al. (EDI 698) compilation and derived analyses -- large, kept local
+data/Stetler/
+
+# Lake Mendota fall metabolism (exploratory) -- script, hourly buoy inputs, outputs
+R/Metabolism_Mendota_fall.R
+data/Buoy/ntl129_2_v16.csv
+data/Buoy/ntl130_2_v14.csv
+data/Buoy/metab_mendota_fall_*.csv
+
+# MEMO 2020+ YSI data (not used in the pipeline) -- build script, raw files, compiled file
+R/01b_build_memo_2020_2025.R
+data/MEMO/memo_ysi_2006-2023.csv
+data/MEMO/YSI_data_*.xlsx
+data/MEMO/MEMO_YSI_2020-2025.csv
+data/MEMO/README.md

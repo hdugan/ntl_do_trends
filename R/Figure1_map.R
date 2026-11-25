@@ -57,7 +57,7 @@ basemap_provider <- "Esri.WorldGrayCanvas"
 color_south <- "#a1783f" # teal — southern (Yahara) lakes
 color_north <- "#1F4B3F" # forest green — northern (Northwoods) lakes
 
-output_file <- "figures/figMap_regions.png"
+output_file <- "figures/fig01_map.png"
 
 # ---- 2. Lake coordinates -----------------------------------------------------
 # Coordinates are the official NTL-LTER sampling-station locations.
@@ -346,7 +346,7 @@ p_south <- p_south + patchwork::inset_element(
 # ---- 7. Combine stacked ---------------------------------------------------------
 
 # No overall title/explainer drawn here -- same convention as the other fig*.R
-# scripts (see Figure4_chl_profiles.R): that text goes to figures/captions.csv
+# scripts (see FigureSX_chl_profiles.R): that text goes to figures/captions.csv
 # only. The per-panel region names stay on the PNG since they're panel labels,
 # not the figure's headline/explainer.
 combined <- p_north / p_south
@@ -367,7 +367,7 @@ ggsave(output_file, combined, width = output_width, height = output_height, dpi 
 message("Saved: ", normalizePath(output_file))
 
 ## Title + caption are NOT drawn on the PNG -- written to the shared
-## figures/captions.csv instead (see Figure1_rate_of_change.R for the same convention).
+## figures/captions.csv instead (see Figure2_rate_of_change.R for the same convention).
 write_captions <- function(new_caps) {
     path <- "figures/captions.csv"
     old <- if (file.exists(path)) data.table::fread(path) else data.table::data.table(file = character(), title = character(), caption = character())

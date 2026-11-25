@@ -1,4 +1,4 @@
-## FigureSX_Mendota_comp.R: Lake Mendota temperature and dissolved oxygen, 1906 vs 2016-2025.
+## Figure4_Mendota_1906_comp.R: Lake Mendota temperature and dissolved oxygen, 1906 vs 2016-2025.
 ##
 ## Four panels -- rows = era (1906, 2016-2025), columns = variable (temperature, DO mg/L).
 ## The 1906 data are digitized from Birge & Juday (1911), Wisconsin Geol. Nat. Hist. Surv.
@@ -72,7 +72,7 @@ tmod <- interp_casts("wtemp", DEPTHS$temp)
 omod <- interp_casts("o2", DEPTHS$do)
 smod <- interp_casts("o2sat_me", DEPTHS$do)
 
-## ---- half-month time bins, identical edges to FigureSX_do_heatmaps.R / Figure1 ---------------
+## ---- half-month time bins, identical edges to FigureSX_do_heatmaps.R / Figure2 ---------------
 hedges <- c(91,106,121,136,152,167,182,197,213,228,244,259,274,289,305,320)
 mbound <- c(91,121,152,182,213,244,274,305,320)
 xsc <- scale_x_continuous(breaks=c(106,136.5,167,197.5,228.5,259,289.5,312.5),
@@ -103,8 +103,8 @@ pal_sat <- scale_fill_gradientn(colours=do_cols, values=rescale(c(0,10,20,40,70,
                                 limits=c(0,140), oob=squish, na.value="grey90")
 
 ## ---- difference palettes: only cells beyond a threshold are coloured, everything else very light grey ----
-## Thresholds are Figure 1's +/- values: 1 deg C, 1.5 mg/L, 15 % sat. Colours are the darkest end of
-## the extended Figure 1 scales (temp red/blue, DO green/brown).
+## Thresholds are Figure 2's +/- values: 1 deg C, 1.5 mg/L, 15 % sat. Colours are the darkest end of
+## the extended Figure 2 scales (temp red/blue, DO green/brown).
 THRESH <- c(temp=1, mgL=1.5, sat=15)
 thresh_pal <- function(hi, lo, lab_hi, lab_lo, name) {
   scale_fill_manual(values=c(hi=hi, lo=lo, none="#efefef"), breaks=c("hi","lo"),
@@ -146,9 +146,9 @@ diff_agg <- function(a_old, a_new) {
 a_t06 <- agg_1906(t1906); a_tmd <- agg_modern(tmod); a_tdf <- diff_agg(a_t06, a_tmd)  # continuous difference, classified at plot time
 DO <- list(
   mgL = list(a06=agg_1906(o1906), amd=agg_modern(omod), pal=pal_do,  dpal=pal_odiff, thr=THRESH[["mgL"]],
-             lab="DO (mg/L)", file="figures/figSX_mendota_1906_comp.png"),
+             lab="DO (mg/L)", file="figures/fig04_mendota_1906_comp.png"),
   sat = list(a06=agg_1906(s1906), amd=agg_modern(smod), pal=pal_sat, dpal=pal_satdiff, thr=THRESH[["sat"]],
-             lab="DO (% sat)", file="figures/figSX_mendota_1906_comp_sat.png"))
+             lab="DO (% sat)", file="figures/fig04_mendota_1906_comp_sat.png"))
 cat(sprintf("diff ranges -- temp %.1f to %.1f; mg/L %.1f to %.1f; %%sat %.0f to %.0f\n",
             min(a_tdf$m), max(a_tdf$m),
             min(diff_agg(DO$mgL$a06, DO$mgL$amd)$m), max(diff_agg(DO$mgL$a06, DO$mgL$amd)$m),
@@ -191,8 +191,8 @@ dlist <- function(x) paste0(paste(head(x, -1), collapse=", "), " and ", tail(x, 
 base_cap <- paste0(
   "by half-month period: 1906 (left), 2016-2025 (middle), and the difference 2016-2025 minus 1906 ",
   "(right; only where both eras have a value, and coloured only where the change exceeds a threshold: ",
-  "temperature +/-1 deg C, DO +/-1.5 mg/L or +/-15 % sat -- Figure 1's values -- red/blue for warmer/cooler, ",
-  "green/brown for more/less oxygen; all other cells very light grey). Note Figure 1 is a rate per decade, this is the total ",
+  "temperature +/-1 deg C, DO +/-1.5 mg/L or +/-15 % sat -- Figure 2's values -- red/blue for warmer/cooler, ",
+  "green/brown for more/less oxygen; all other cells very light grey). Note Figure 2 is a rate per decade, this is the total ",
   "change across ~110 years. Dashed vertical lines mark the start of each month; labels sit mid-month (the Nov label covers Nov 1-15 only). ",
   "The 1906 values are digitized from Birge and Juday (1911), Wisconsin Geological and Natural History ",
   "Survey Bulletin XXII, Plates I and II -- repeated casts at fixed depths (temperature: ", dlist(DEPTHS$temp),

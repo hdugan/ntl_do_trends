@@ -1,5 +1,5 @@
-## FigureSX_Mendota_fall_daily.R: Lake Mendota autumn (1 Sep-9 Nov) temperature trends by depth x DAY.
-## A zoom on Figure 2 (Figure1_rate_of_change.R) for the period when warming is strongest, using the
+## Figure5_Mendota_fall_daily.R: Lake Mendota autumn (1 Sep-9 Nov) temperature trends by depth x DAY.
+## A zoom on Figure 2 (Figure2_rate_of_change.R) for the period when warming is strongest, using the
 ## Mendota buoy (EDI knb-lter-ntl.130, data/Buoy/ntl130_1_v14.csv, 2006-2025; plus 2026 from
 ## data/Buoy/ntl130_daily_2026.csv, built by R/01c_buoy_daily_2026.R): daily means, 0-20 m.
 ##
@@ -54,7 +54,7 @@ cat("years dropped (coverage):", cov[!year %in% keep, paste(sprintf("%d(%.0f%%)"
 ## ---- trends per day x depth ------------------------------------------------------------------------
 sen <- function(y, x){ n <- length(y); dd <- outer(y,y,"-")[lower.tri(diag(n))] / outer(x,x,"-")[lower.tri(diag(n))]; median(dd[is.finite(dd)]) }
 tr <- d[, if(.N >= MIN_YR && diff(range(year)) >= MIN_SPAN) .(slope=10*sen(t7, year), nyr=.N), by=.(pday, dbin)]
-fwrite(tr, "figures/figSX_Mendota_fall_daily_trends.csv")
+fwrite(tr, "figures/fig05_Mendota_fall_daily_trends.csv")
 
 ## ---- 5 m x 2-week block significance ---------------------------------------------------------------
 BLK <- c(0, 5, 10, 15, ZMAX + 1)
@@ -65,7 +65,7 @@ bk[, q := p.adjust(p, "BH")][, sig := q < 0.05]
 bk[, `:=`(x0=(per-1)*14 + 0.5, x1=pmin(per*14, NDAY) + 0.5, ytop=BLK[blk]-0.5, ybot=BLK[blk+1]-0.5,
           depth=sprintf("%d-%d m", BLK[blk], BLK[blk+1]-1))]
 fwrite(bk[, .(per, days=sprintf("%d-%d", (per-1)*14+1, pmin(per*14, NDAY)), depth, slope=round(slope,2),
-              p=signif(p,3), q=signif(q,3), sig, nyr)], "figures/figSX_Mendota_fall_daily_blocks.csv")
+              p=signif(p,3), q=signif(q,3), sig, nyr)], "figures/fig05_Mendota_fall_daily_blocks.csv")
 cat("\nblock trends (degC/decade; * = BH q<0.05):\n")
 print(dcast(bk[, .(depth, per, s=sprintf("%+.2f%s (p=%.3f)", slope, fifelse(sig,"*",""), p))], depth ~ per, value.var="s"))
 
@@ -110,8 +110,8 @@ gb <- ggplot(to, aes(year, turn)) +
   theme(panel.grid.minor=element_blank(), plot.title=element_text(face="bold", size=7),
         plot.tag=element_text(face="bold", size=10))
 g <- ga + gb + plot_layout(widths=c(2.6, 1))
-ggsave("figures/figSX_Mendota_fall_daily.png", g, width=6.5, height=3.4, dpi=500, bg="white")
-cat("wrote figures/figSX_Mendota_fall_daily.png\n")
+ggsave("figures/fig05_Mendota_fall_daily.png", g, width=6.5, height=3.4, dpi=500, bg="white")
+cat("wrote figures/fig05_Mendota_fall_daily.png\n")
 
 write_captions <- function(new_caps){
   path <- "figures/captions.csv"
@@ -119,7 +119,7 @@ write_captions <- function(new_caps){
   fwrite(rbind(old[!file %in% new_caps$file], new_caps), path); cat("wrote", path, "\n")
 }
 write_captions(data.table(
-  file="figures/figSX_Mendota_fall_daily.png",
+  file="figures/fig05_Mendota_fall_daily.png",
   title="Lake Mendota autumn warming and fall turnover from the buoy record",
   caption=paste0(
     "(A) Theil-Sen trend in water temperature (°C per decade) for each day and 1-m depth, 1 September-9 November, ",

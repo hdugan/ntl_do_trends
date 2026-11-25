@@ -20,7 +20,7 @@ TEMP_JUMP_MAX <- 5   # degC: max allowed increase at the single deepest reading 
 DO_JUMP_MAX   <- 20  # %sat: max allowed increase at the single deepest reading vs the next-shallowest
 ZMAX_MIN      <- 10  # m: only apply the check to lakes deeper than this
 
-## max depth (m) of each of the 11 NTL primary study lakes, same values used in Figure1_rate_of_change.R
+## max depth (m) of each of the 11 NTL primary study lakes, same values used in Figure2_rate_of_change.R
 zmax <- data.table(
   lakeid=c("TR","BM","CR","SP","AL","TB","CB","ME","MO","FI","WI"),
   zmax  =c(35.7,21.3,20.4,20.0,8.0,7.9,2.5,25.3,22.5,18.9,4.0))
